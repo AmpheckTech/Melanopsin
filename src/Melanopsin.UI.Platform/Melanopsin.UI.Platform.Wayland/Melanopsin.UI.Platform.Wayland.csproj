@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsAotCompatible>true</IsAotCompatible>
+    <IsTrimmable>true</IsTrimmable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RootNamespace>Melanopsin.UI.Platform.Wayland</RootNamespace>
+    <Description>Managed Wayland platform host for Melanopsin.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NWayland" Version="0.12.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Melanopsin.Graphics/Melanopsin.Graphics.csproj" />
+    <ProjectReference Include="../../Melanopsin.UI/Melanopsin.UI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Melanopsin.Graphics" />
+    <Using Include="Melanopsin.Graphics.Rendering" />
+    <Using Include="Melanopsin.UI.Hosting" />
+    <Using Include="Melanopsin.UI.Rendering" />
+  </ItemGroup>
+</Project>

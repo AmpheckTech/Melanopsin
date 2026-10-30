@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <IlcOptimizationPreference>Size</IlcOptimizationPreference>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    <RootNamespace>Melanopsin.UI.Demo</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Melanopsin.UI/Melanopsin.UI.csproj" />
+    <ProjectReference Include="../../src/Melanopsin.UI.Controls/Melanopsin.UI.Controls.csproj" />
+    <ProjectReference
+      Include="../../src/Melanopsin.UI.Markup.Compiler/Melanopsin.UI.Markup.Compiler.csproj"
+      OutputItemType="Analyzer"
+      ReferenceOutputAssembly="false"
+      GlobalPropertiesToRemove="PublishAot;SelfContained;RuntimeIdentifier" />
+    <ProjectReference Include="../../src/Melanopsin.Graphics.Backend/Melanopsin.Graphics.Backend.Skia/Melanopsin.Graphics.Backend.Skia.csproj" />
+    <ProjectReference Include="..\..\src\Melanopsin.UI.Platform\Melanopsin.UI.Platform.Win32\Melanopsin.UI.Platform.Win32.csproj" />
+    <ProjectReference Include="..\..\src\Melanopsin.UI.Platform\Melanopsin.UI.Platform.Wayland\Melanopsin.UI.Platform.Wayland.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="Views/**/*.xml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Styles/**/*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Melanopsin.Graphics" />
+    <Using Include="Melanopsin.Graphics.Rendering" />
+    <Using Include="Melanopsin.UI.Controls" />
+    <Using Include="Melanopsin.UI.Hosting" />
+    <Using Include="Melanopsin.UI.Layout" />
+    <Using Include="Melanopsin.UI.Rendering" />
+  </ItemGroup>
+
+</Project>

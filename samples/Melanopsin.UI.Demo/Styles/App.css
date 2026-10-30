@@ -1,0 +1,52 @@
+.app { background: #f4f7f5; color: #15251f; }
+.canvas { background: transparent; padding: 6su; }
+.card {
+    background: #ffffff;
+    color: #15251f;
+    border-color: #d9e4df;
+    border-width: 1hx;
+    border-radius: 6ru;
+    padding: 4su;
+}
+.header { background: transparent; }
+.eyebrow { color: #60776e; font-size: 10fu; }
+.title { color: #14251f; font-size: 25fu; }
+.intro { color: #62746d; font-size: 13fu; }
+.label { color: #40574e; font-size: 12fu; }
+.value { color: #1f6d59; font-size: 12fu; text-align: end; }
+.field { width: 100%; }
+.state { background: #e3efe9; color: #236650; border-radius: 4ru; font-size: 11fu; }
+.preview {
+    background: #eef6f1;
+    border-color: #d6e8df;
+    border-width: 1hx;
+    border-radius: 4ru;
+    padding: 3su;
+}
+.preview-title { color: #163a2e; font-size: 18fu; }
+.preview-detail { color: #587168; font-size: 12fu; }
+.theme-note { color: #40574e; font-size: 12fu; }
+.tags { background: transparent; }
+.tag {
+    background: #dceee5;
+    color: #236650;
+    border-radius: 3ru;
+    padding: 1su 2su;
+    font-size: 10fu;
+}
+Button.primary {
+    width: 100%;
+    background: #1f6d59;
+    color: #ffffff;
+    border-radius: 4ru;
+    font-size: 14fu;
+}
+Button.primary:hover { background: #287d67; }
+Button.primary:pressed { background: #185746; }
+Input.field, ComboBox.field {
+    background: #fbfdfc;
+    border-color: #c8d8d1;
+    border-radius: 3ru;
+}
+Input.field:focused, ComboBox.field:focused { border-color: #1f6d59; }
+CheckBox { font-size: 12fu; }

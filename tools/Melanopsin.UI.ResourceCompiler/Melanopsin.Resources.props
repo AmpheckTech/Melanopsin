@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <MelanopsinResourceStorage Condition="'$(MelanopsinResourceStorage)' == ''">Embedded</MelanopsinResourceStorage>
+    <MelanopsinResourceCompilerProject Condition="'$(MelanopsinResourceCompilerProject)' == '' and Exists('$(MSBuildThisFileDirectory)Melanopsin.UI.ResourceCompiler.csproj')">$(MSBuildThisFileDirectory)Melanopsin.UI.ResourceCompiler.csproj</MelanopsinResourceCompilerProject>
+    <MelanopsinResourceCompilerConfiguration Condition="'$(MelanopsinResourceCompilerConfiguration)' == ''">$(Configuration)</MelanopsinResourceCompilerConfiguration>
+    <MelanopsinResourceCompilerConfiguration Condition="'$(MelanopsinResourceCompilerConfiguration)' == ''">Debug</MelanopsinResourceCompilerConfiguration>
+    <MelanopsinResourceCompilerAssembly Condition="'$(MelanopsinResourceCompilerAssembly)' == '' and '$(ArtifactsPath)' != ''">$(ArtifactsPath)/bin/Melanopsin.UI.ResourceCompiler/$(MelanopsinResourceCompilerConfiguration.ToLowerInvariant())/Melanopsin.UI.ResourceCompiler.dll</MelanopsinResourceCompilerAssembly>
+  </PropertyGroup>
+</Project>

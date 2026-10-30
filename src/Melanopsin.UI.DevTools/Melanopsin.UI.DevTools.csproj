@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsAotCompatible>true</IsAotCompatible>
+    <IsTrimmable>true</IsTrimmable>
+    <RootNamespace>Melanopsin.UI.DevTools</RootNamespace>
+    <Description>XML-driven diagnostics window for Melanopsin applications.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Melanopsin.UI/Melanopsin.UI.csproj" />
+    <ProjectReference Include="../Melanopsin.UI.Controls/Melanopsin.UI.Controls.csproj" />
+    <ProjectReference
+      Include="../Melanopsin.UI.Markup.Compiler/Melanopsin.UI.Markup.Compiler.csproj"
+      OutputItemType="Analyzer"
+      ReferenceOutputAssembly="false"
+      GlobalPropertiesToRemove="PublishAot;SelfContained;RuntimeIdentifier" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="Views/**/*.xml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Melanopsin.Graphics.Rendering" />
+    <Using Include="Melanopsin.UI" />
+    <Using Include="Melanopsin.UI.Controls" />
+    <Using Include="Melanopsin.UI.Hosting" />
+  </ItemGroup>
+</Project>

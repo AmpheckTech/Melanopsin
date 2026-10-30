@@ -1,0 +1,60 @@
+<Project>
+  <UsingTask TaskName="Melanopsin.UI.ResourceCompiler.GenerateResourcePackTask"
+             AssemblyFile="$(MelanopsinResourceCompilerAssembly)" />
+
+  <PropertyGroup>
+    <MelanopsinResourceStorage Condition="'$(MelanopsinResourceStorage)' == ''">Embedded</MelanopsinResourceStorage>
+    <_MelanopsinResourceOutputDirectory Condition="'$(_MelanopsinResourceOutputDirectory)' == ''">$(IntermediateOutputPath)MelanopsinResources/</_MelanopsinResourceOutputDirectory>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'@(MelanopsinResource)' != ''">
+    <AdditionalFiles Include="@(MelanopsinResource)" KeepDuplicates="false" />
+  </ItemGroup>
+
+  <Target Name="MelanopsinBuildResourceCompiler"
+          Condition="'@(MelanopsinResource)' != ''">
+    <MSBuild Projects="$(MelanopsinResourceCompilerProject)"
+             Targets="Restore;Build"
+             BuildInParallel="false"
+             Properties="Configuration=$(MelanopsinResourceCompilerConfiguration);ArtifactsPath=$(ArtifactsPath);UseArtifactsOutput=true"
+             RemoveProperties="RuntimeIdentifier;SelfContained;PublishAot;PublishTrimmed;PublishSingleFile;PlatformTarget;Platform" />
+  </Target>
+
+  <Target Name="MelanopsinCompileResourcePacks"
+          BeforeTargets="AssignTargetPaths;CreateManifestResourceNames"
+          DependsOnTargets="ResolveProjectReferences;MelanopsinBuildResourceCompiler"
+          Condition="'@(MelanopsinResource)' != ''">
+    <PropertyGroup>
+      <_MelanopsinResourceOutputDirectory>$(IntermediateOutputPath)MelanopsinResources/</_MelanopsinResourceOutputDirectory>
+    </PropertyGroup>
+
+    <Error Condition="'$(MelanopsinResourceStorage)' != 'Embedded' and '$(MelanopsinResourceStorage)' != 'AppDirectory' and '$(MelanopsinResourceStorage)' != 'Both'"
+           Text="MelanopsinResourceStorage must be Embedded, AppDirectory, or Both." />
+
+    <RemoveDir Directories="$(_MelanopsinResourceOutputDirectory)" />
+    <MakeDir Directories="$(_MelanopsinResourceOutputDirectory)" />
+
+    <GenerateResourcePackTask Manifest="%(MelanopsinResource.FullPath)"
+                              Values="%(MelanopsinResource.Values)"
+                              ProjectDirectory="$(MSBuildProjectDirectory)"
+                              OutputDirectory="$(_MelanopsinResourceOutputDirectory)">
+      <Output TaskParameter="GeneratedPack"
+              ItemName="_MelanopsinGeneratedResourcePack" />
+    </GenerateResourcePackTask>
+
+    <ItemGroup>
+      <EmbeddedResource Include="@(_MelanopsinGeneratedResourcePack)"
+                        Condition="'$(MelanopsinResourceStorage)' == 'Embedded' or '$(MelanopsinResourceStorage)' == 'Both'">
+        <LogicalName>%(_MelanopsinGeneratedResourcePack.LogicalName)</LogicalName>
+        <Visible>false</Visible>
+      </EmbeddedResource>
+
+      <None Include="@(_MelanopsinGeneratedResourcePack)"
+            Condition="'$(MelanopsinResourceStorage)' == 'AppDirectory' or '$(MelanopsinResourceStorage)' == 'Both'">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <TargetPath>%(_MelanopsinGeneratedResourcePack.TargetPath)</TargetPath>
+        <Visible>false</Visible>
+      </None>
+    </ItemGroup>
+  </Target>
+</Project>

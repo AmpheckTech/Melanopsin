@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsAotCompatible>true</IsAotCompatible>
+    <IsTrimmable>true</IsTrimmable>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <RootNamespace>Melanopsin.UI.Controls</RootNamespace>
+    <Description>Built-in controls and layout containers for Melanopsin UI.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Melanopsin.UI/Melanopsin.UI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Melanopsin.UI.Animation" />
+    <Using Include="Melanopsin.Mathematics" />
+    <Using Include="Melanopsin.Reactive" />
+    <Using Include="Melanopsin.Graphics" />
+    <Using Include="Melanopsin.Graphics.Text.Fonts" />
+    <Using Include="Melanopsin.Graphics.Text" />
+    <Using Include="Melanopsin.Graphics.Rendering" />
+    <Using Include="Melanopsin.UI" />
+    <Using Include="Melanopsin.UI.Hosting" />
+    <Using Include="Melanopsin.UI.Layout" />
+    <Using Include="Melanopsin.UI.Rendering" />
+  </ItemGroup>
+</Project>
