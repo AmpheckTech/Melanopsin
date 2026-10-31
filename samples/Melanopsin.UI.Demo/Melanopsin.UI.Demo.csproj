@@ -19,6 +19,7 @@
       ReferenceOutputAssembly="false"
       GlobalPropertiesToRemove="PublishAot;SelfContained;RuntimeIdentifier" />
     <ProjectReference Include="../../src/Melanopsin.Graphics.Backend/Melanopsin.Graphics.Backend.Skia/Melanopsin.Graphics.Backend.Skia.csproj" />
+    <ProjectReference Include="..\..\src\Melanopsin.Graphics.Backend\Melanopsin.Graphics.Backend.RHI\Melanopsin.Graphics.Backend.RHI.csproj" />
     <ProjectReference Include="..\..\src\Melanopsin.UI.Platform\Melanopsin.UI.Platform.Win32\Melanopsin.UI.Platform.Win32.csproj" />
     <ProjectReference Include="..\..\src\Melanopsin.UI.Platform\Melanopsin.UI.Platform.Wayland\Melanopsin.UI.Platform.Wayland.csproj" />
   </ItemGroup>

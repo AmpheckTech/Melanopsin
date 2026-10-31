@@ -1,4 +1,5 @@
 using Melanopsin.Graphics;
+using Melanopsin.Graphics.Backend.RHI;
 using Melanopsin.Graphics.Backend.Skia;
 using Melanopsin.Graphics.Text;
 using Melanopsin.Graphics.Text.Fonts;
@@ -35,7 +36,7 @@ internal static class Program {
                 "App.css"))).Rules);
 
         using var windows = new WindowManager(
-            new SkiaRenderBackend(font),
+            new RHIRenderBackend(),
             platform,
             new StyleEngine(styleSheet, metrics),
             platformHost: platform,

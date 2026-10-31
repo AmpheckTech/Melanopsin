@@ -16,6 +16,7 @@
     <Project Path="src/Melanopsin.UI.Controls/Melanopsin.UI.Controls.csproj" />
   </Folder>
   <Folder Name="/src/Melanopsin.Graphics.Backend/">
+    <Project Path="src/Melanopsin.Graphics.Backend/Melanopsin.Graphics.Backend.RHI/Melanopsin.Graphics.Backend.RHI.csproj" />
     <Project Path="src/Melanopsin.Graphics.Backend/Melanopsin.Graphics.Backend.Skia/Melanopsin.Graphics.Backend.Skia.csproj" />
   </Folder>
   <Folder Name="/src/Melanopsin.UI.Platform/">
