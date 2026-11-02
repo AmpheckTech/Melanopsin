@@ -20,7 +20,7 @@ public sealed class ComponentHost : Control {
         }
 
         IsRelayoutBoundary = true;
-        SetAttributeValue("input", "none");
+        SetAttributeValue(InputAttribute, false);
         _component.Invalidated += OnComponentInvalidated;
         Rebuild();
     }
@@ -62,7 +62,6 @@ public sealed class ComponentHost : Control {
     }
 
     internal void AttachRuntime(UiRuntime runtime) {
-        ArgumentNullException.ThrowIfNull(runtime);
         if (Runtime is not null && !ReferenceEquals(Runtime, runtime)) {
             throw new InvalidOperationException(
                 "A component host cannot be attached to more than one UiRuntime.");
@@ -72,7 +71,6 @@ public sealed class ComponentHost : Control {
     }
 
     internal void DetachRuntime(UiRuntime runtime) {
-        ArgumentNullException.ThrowIfNull(runtime);
         if (ReferenceEquals(Runtime, runtime)) {
             Runtime = null;
         }
@@ -86,6 +84,25 @@ public sealed class ComponentHost : Control {
             RemoveChild(_content);
             _content = null;
         }
+    }
+
+    protected internal override InvalidationKind OnReconciledFrom(Element source) {
+        var invalidation = base.OnReconciledFrom(source);
+        if (source is ComponentHost incoming) {
+            incoming.Disconnect();
+        }
+
+        return invalidation;
+    }
+
+    // The host's children are the tree its component built, not markup the
+    // parent owns, so a parent rebuild must leave them (and the component
+    // state behind them) alone.
+    protected internal override bool ReconcilesChildren => false;
+
+    protected internal override void OnUnmounted() {
+        Disconnect();
+        base.OnUnmounted();
     }
 
     private void OnComponentInvalidated(Component component) {

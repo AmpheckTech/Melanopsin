@@ -16,4 +16,12 @@ internal static class MarkupDiagnosticCodes {
     public const string InvalidResourceReference = "MNP013";
     public const string IncompatibleResourceType = "MNP014";
     public const string InvalidReference = "MNP015";
+    public const string UnknownEvent = "MNP016";
+    public const string InvalidEventExpression = "MNP017";
+    public const string InvalidStylesheet = "MNP018";
+    public const string UnknownStyleSlot = "MNP019";
+    public const string StyleSlotTypeMismatch = "MNP020";
+    public const string InvalidNamespace = "MNP021";
+    public const string AmbiguousControl = "MNP022";
+    public const string UnknownControlNamespace = "MNP023";
 }

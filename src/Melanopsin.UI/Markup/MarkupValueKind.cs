@@ -7,6 +7,7 @@ public enum MarkupValueKind {
     Any,
     Number,
     Length,
+    Color,
     Integer,
     Boolean,
     Enum,

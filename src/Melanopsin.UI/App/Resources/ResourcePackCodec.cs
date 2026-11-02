@@ -101,14 +101,6 @@ internal static class ResourcePackCodec {
         object value) {
         EnsureType<Length>(descriptor, value);
         var length = (Length)value;
-        if (!float.IsFinite(length.Value) ||
-            length.Value < 0 ||
-            length.Unit is < LengthUnit.Auto or > LengthUnit.Point) {
-            throw new ArgumentException(
-                $"Resource '{descriptor.Id}' has an invalid length.",
-                nameof(value));
-        }
-
         var output = new byte[5];
         BinaryPrimitives.WriteSingleLittleEndian(output, length.Value);
         output[4] = checked((byte)length.Unit);
@@ -206,7 +198,7 @@ internal static class ResourcePackCodec {
         }
 
         var value = BinaryPrimitives.ReadSingleLittleEndian(data);
-        if (!float.IsFinite(value) || value < 0) {
+        if (!float.IsFinite(value)) {
             throw InvalidBlob(descriptor);
         }
 
@@ -285,5 +277,32 @@ internal static class ResourcePackCodec {
         return new InvalidDataException(
             $"Resource '{descriptor.Id}' contains an invalid {descriptor.Kind} value.",
             innerException);
+    }
+
+    internal static long EstimateDecodedBytes(object value) {
+        return value switch {
+            string text => checked(StrictUtf8.GetByteCount(text) * 2L),
+            ImageResource image => checked(
+                image.Data.Length +
+                (image.MediaType is null
+                    ? 0
+                    : StrictUtf8.GetByteCount(image.MediaType) * 2L)),
+            FontFace font => font.Data.Length,
+            byte[] data => data.Length,
+            _ => 0,
+        };
+    }
+
+    internal static long EstimateDecodedBytesUpperBound(
+        ResourceKind kind,
+        long encodedBytes) {
+        return kind switch {
+            ResourceKind.String or ResourceKind.Message =>
+                checked(encodedBytes * sizeof(char)),
+            ResourceKind.Image => checked(
+                encodedBytes + (ushort.MaxValue * sizeof(char))),
+            ResourceKind.Font or ResourceKind.Binary => encodedBytes,
+            _ => 0,
+        };
     }
 }

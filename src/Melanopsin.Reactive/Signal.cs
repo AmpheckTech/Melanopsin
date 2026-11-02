@@ -1,11 +1,9 @@
 namespace Melanopsin.Reactive;
 
 /// <summary>
-/// Observable value that participates in automatic dependency tracking.
-/// Access on the scheduler thread, or before a scheduler is captured, notifies
-/// synchronously. Cross-thread writes are posted to the captured scheduler. A
-/// stopped scheduler is replaced when a new scheduler is active; notifications
-/// are dropped only when no scheduler is available.
+/// Observable value that participates in automatic dependency tracking. Writes
+/// notify synchronously on the scheduler thread and are posted to the captured
+/// scheduler otherwise.
 /// </summary>
 public sealed class Signal<T> : IWritableSignal<T>, IReactiveSource {
     private readonly object _gate = new();
@@ -21,10 +19,7 @@ public sealed class Signal<T> : IWritableSignal<T>, IReactiveSource {
     }
 
     /// <param name="initialValue">The initial signal value.</param>
-    /// <param name="comparer">
-    /// Comparer used to suppress writes that do not change the value. The default
-    /// comparer is <see cref="EqualityComparer{T}.Default"/>.
-    /// </param>
+    /// <param name="comparer">Suppresses writes that do not change the value; defaults to <see cref="EqualityComparer{T}.Default"/>.</param>
     public Signal(
         T initialValue,
         IEqualityComparer<T>? comparer) {

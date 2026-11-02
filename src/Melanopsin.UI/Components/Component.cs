@@ -1,5 +1,5 @@
-using Melanopsin.UI.App;
 using Melanopsin.Reactive;
+using Melanopsin.UI.App;
 
 namespace Melanopsin.UI;
 
@@ -57,7 +57,6 @@ public abstract class Component : IContextStore, IReactiveInvalidationTarget {
     }
 
     internal void CompleteBuild(Node root) {
-        ArgumentNullException.ThrowIfNull(root);
         OnBuildCompleted(root);
     }
 

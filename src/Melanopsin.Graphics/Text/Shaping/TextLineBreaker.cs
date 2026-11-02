@@ -1,9 +1,24 @@
+using System.Buffers;
 using System.Text;
-using Uax14Net;
 
 namespace Melanopsin.Graphics.Text;
 
+/// <summary>
+/// Splits text into the segments a line may be wrapped between, following the
+/// default Unicode line breaking algorithm, UAX #14.
+/// </summary>
+/// <remarks>
+/// Applies the default rules of UAX #14 revision 56 (Unicode 17.0) without
+/// tailoring. This type only walks paragraphs and emits tokens; units come from
+/// <see cref="LineBreakContext"/> and the rules from
+/// <see cref="LineBreakRules"/>.
+/// </remarks>
 internal static class TextLineBreaker {
+    /// <summary>
+    /// Splits <paramref name="text"/> into tokens. Tokens that start with a
+    /// space are flagged as whitespace, and hard line breaks are yielded as
+    /// their own tokens.
+    /// </summary>
     public static IEnumerable<TextToken> Tokenize(string text) {
         var paragraphStart = 0;
         var index = 0;
@@ -12,12 +27,17 @@ internal static class TextLineBreaker {
                 text.AsSpan(index),
                 out var rune,
                 out var consumed);
-            if (runeStatus != System.Buffers.OperationStatus.Done) {
+            if (runeStatus != OperationStatus.Done) {
                 rune = Rune.ReplacementChar;
                 consumed = 1;
             }
 
-            if (rune.Value == '\r' || rune.Value == '\n') {
+            var lineBreakClass = LineBreakData.Resolve(rune.Value, out _);
+            if (lineBreakClass is
+                LineBreakClass.BK or
+                LineBreakClass.CR or
+                LineBreakClass.LF or
+                LineBreakClass.NL) {
                 foreach (var token in TokenizeParagraph(
                     text,
                     paragraphStart,
@@ -25,7 +45,8 @@ internal static class TextLineBreaker {
                     yield return token;
                 }
 
-                if (rune.Value == '\r' &&
+                // LB5: CR LF is a single hard line break.
+                if (lineBreakClass == LineBreakClass.CR &&
                     index + 1 < text.Length &&
                     text[index + 1] == '\n') {
                     consumed++;
@@ -53,36 +74,45 @@ internal static class TextLineBreaker {
         int start,
         int end) {
         var tokens = new List<TextToken>();
-        if (end <= start) {
+        var length = end - start;
+        if (length <= 0) {
             return tokens;
         }
 
-        var span = text.AsSpan(start, end - start);
+        var span = text.AsSpan(start, length);
+        var context = new LineBreakContext(span);
         var tokenStart = 0;
-        foreach (var opportunity in LineBreaker.Enumerate(span)) {
-            if (opportunity.Position <= tokenStart) {
+        for (var index = 0; index + 1 < context.Count; index++) {
+            if (!LineBreakRules.IsBreakAllowed(context, index)) {
                 continue;
             }
 
-            var segment = span[tokenStart..opportunity.Position];
-            var status = Rune.DecodeFromUtf16(segment, out var first, out _);
-            tokens.Add(new TextToken(
-                start + tokenStart,
-                opportunity.Position - tokenStart,
-                status == System.Buffers.OperationStatus.Done &&
-                Rune.IsWhiteSpace(first),
-                false));
-            tokenStart = opportunity.Position;
+            var breakOffset = context.EndOf(index);
+            AppendToken(tokens, span, start, tokenStart, breakOffset);
+            tokenStart = breakOffset;
         }
 
-        if (tokenStart < span.Length) {
-            tokens.Add(new TextToken(
-                start + tokenStart,
-                span.Length - tokenStart,
-                false,
-                false));
-        }
-
+        // LB3: text always ends with a break opportunity.
+        AppendToken(tokens, span, start, tokenStart, length);
         return tokens;
+    }
+
+    private static void AppendToken(
+        List<TextToken> tokens,
+        ReadOnlySpan<char> span,
+        int start,
+        int tokenStart,
+        int tokenEnd) {
+        if (tokenEnd <= tokenStart) {
+            return;
+        }
+
+        var segment = span[tokenStart..tokenEnd];
+        var status = Rune.DecodeFromUtf16(segment, out var first, out _);
+        tokens.Add(new TextToken(
+            start + tokenStart,
+            tokenEnd - tokenStart,
+            status == OperationStatus.Done && Rune.IsWhiteSpace(first),
+            false));
     }
 }

@@ -31,8 +31,7 @@ public sealed class ResourcePack : ResourceProvider {
                     nameof(values));
             }
 
-            if (!descriptors.ContainsKey(value.Id)) {
-                descriptors.Add(value.Id, descriptor);
+            if (descriptors.TryAdd(value.Id, descriptor)) {
                 orderedDescriptors.Add(descriptor);
             }
 

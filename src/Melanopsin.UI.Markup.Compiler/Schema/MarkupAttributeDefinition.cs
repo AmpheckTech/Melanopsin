@@ -10,4 +10,7 @@ internal sealed record MarkupAttributeDefinition(
     string? ValueTypeName,
     string? PropertyName,
     string? PropertyTypeName,
-    IReadOnlyDictionary<string, string> EnumMembers);
+    IReadOnlyDictionary<string, string> EnumMembers,
+    string? DescriptorAccessor = null,
+    string? DeclaredPropertyName = null,
+    string? DeclaringTypeName = null);

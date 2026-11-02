@@ -7,8 +7,6 @@ public sealed class RoutedInputEvent {
     private readonly WindowHitTarget _target;
 
     internal RoutedInputEvent(PointerInputEvent input, WindowHitTarget target) {
-        ArgumentNullException.ThrowIfNull(input);
-        ArgumentNullException.ThrowIfNull(target);
         Input = input;
         _target = target;
         Target = target.Node;
@@ -27,6 +25,12 @@ public sealed class RoutedInputEvent {
     public bool Handled { get; set; }
 
     /// <summary>
+    /// Requests that the window keep its current focus after this pointer-down
+    /// event. The runtime applies its default focus behavior after routing.
+    /// </summary>
+    public bool PreventDefaultFocus { get; set; }
+
+    /// <summary>
     /// Gets the pointer X in the target's untransformed layout coordinates.
     /// </summary>
     public float LayoutX => _target.ToLayoutX(Input.X);
@@ -35,6 +39,20 @@ public sealed class RoutedInputEvent {
     /// Gets the pointer Y in the target's untransformed layout coordinates.
     /// </summary>
     public float LayoutY => _target.ToLayoutY(Input.Y);
+
+    /// <summary>
+    /// Gets the pointer X in the current routing target's untransformed layout
+    /// coordinates. Unlike <see cref="LayoutX"/>, this remains stable while the
+    /// event bubbles through scroll containers and nested controls.
+    /// </summary>
+    public float CurrentTargetLayoutX => _target.ToLayoutX(Input.X, CurrentTarget);
+
+    /// <summary>
+    /// Gets the pointer Y in the current routing target's untransformed layout
+    /// coordinates. Unlike <see cref="LayoutY"/>, this remains stable while the
+    /// event bubbles through scroll containers and nested controls.
+    /// </summary>
+    public float CurrentTargetLayoutY => _target.ToLayoutY(Input.Y, CurrentTarget);
 
     public bool IsInsideTarget => _target.Contains(Input.X, Input.Y);
 

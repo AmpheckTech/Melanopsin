@@ -1,73 +1,51 @@
-using System.Globalization;
 using Melanopsin.UI;
 
 namespace Melanopsin.UI.Demo.Views;
 
 public sealed partial class MainView : Component {
-    private string _name = "Ada";
-    private string _theme = "Forest";
-    private double _tone = 64;
-    private bool _showDetails = true;
+    private const string MotionPage = "motion";
+    private const string ScenePage = "scene";
+    private const string TypographyPage = "typography";
+    private const string LayoutPage = "layout";
+    private const string CodePage = "markup";
+    private string _selectedPage = MotionPage;
 
-    public string Name => _name;
+    public bool ShowMotion => _selectedPage == MotionPage;
 
-    public string Theme => _theme;
+    public bool ShowScene => _selectedPage == ScenePage;
 
-    public double Tone => _tone;
+    public bool ShowTypography => _selectedPage == TypographyPage;
 
-    public bool ShowDetails => _showDetails;
+    public bool ShowLayout => _selectedPage == LayoutPage;
 
-    public int ThemeIndex => _theme switch {
-        "Forest" => 0,
-        "Ocean" => 1,
-        "Sunset" => 2,
-        _ => 0,
-    };
+    public string MotionTabClass => TabClass(MotionPage);
 
-    public string Greeting {
-        get {
-            var displayName = string.IsNullOrWhiteSpace(_name)
-                ? "there"
-                : _name.Trim();
-            return $"Hello, {displayName}.";
+    public string SceneTabClass => TabClass(ScenePage);
+
+    public string TypographyTabClass => TabClass(TypographyPage);
+
+    public string LayoutTabClass => TabClass(LayoutPage);
+
+    public string CodeTabClass => TabClass(CodePage);
+
+    public void SelectMotion() => Select(MotionPage);
+
+    public void SelectScene() => Select(ScenePage);
+
+    public void SelectTypography() => Select(TypographyPage);
+
+    public void SelectLayout() => Select(LayoutPage);
+
+    public void SelectCode() => Select(CodePage);
+
+    private void Select(string page) {
+        if (_selectedPage == page) {
+            return;
         }
+
+        _selectedPage = page;
     }
 
-    public string ThemeSummary => $"{_theme} at {_tone:0}%";
-
-    public IReadOnlyList<string> Tags => _theme switch {
-        "Forest" => ["native", "calm", "green"],
-        "Ocean" => ["native", "fluid", "blue"],
-        "Sunset" => ["native", "warm", "violet"],
-        _ => ["native"],
-    };
-
-    protected override void OnBuildCompleted(Node root) {
-        base.OnBuildCompleted(root);
-        NameInput.TextChanged += value => {
-            _name = value;
-            PreviewText.Text = Greeting;
-        };
-        ThemeSelect.SelectionChanged += (_, value) => {
-            _theme = value;
-            Invalidate();
-        };
-        ToneSlider.ValueChanged += value => {
-            _tone = value;
-            ToneValue.Text = $"{value:0}%";
-            PreviewProgress.SetAttributeValue("value", value);
-            DetailsText.Text = ThemeSummary;
-        };
-        DetailsCheck.CheckedChanged += value => {
-            _showDetails = value;
-            Invalidate();
-        };
-        ApplyButton.Clicked += () => {
-            StateBadge.Text = "Applied";
-            DetailsText.Text =
-                $"Saved at {DateTime.Now.ToString(
-                    "HH:mm:ss",
-                    CultureInfo.InvariantCulture)}";
-        };
-    }
+    private string TabClass(string page) =>
+        _selectedPage == page ? "nav-tab selected" : "nav-tab";
 }

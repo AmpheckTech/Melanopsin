@@ -7,11 +7,10 @@ namespace Melanopsin.UI.Rendering;
 /// Converts a window layout snapshot into an explicit backend-neutral layer
 /// tree. Backends never inspect controls or layout rules.
 /// </summary>
-public sealed class DefaultRenderSceneComposer : IRenderSceneComposer {
+public sealed partial class DefaultRenderSceneComposer : IRenderSceneComposer {
     private static readonly RenderLayer EmptyLayer = new ContainerLayer([]);
     private readonly StyleEngine _styleEngine;
     private readonly ITextLayout? _textLayout;
-    private readonly Dictionary<Node, BoundaryLayerCache> _boundaryCaches = [];
 
     public DefaultRenderSceneComposer(
         StyleEngine? styleEngine = null,
@@ -37,11 +36,18 @@ public sealed class DefaultRenderSceneComposer : IRenderSceneComposer {
             ref reusedBoundaries,
             ref repaintedBoundaries);
         RemoveStaleCaches(layout);
+        // Backdrop filters depend on content outside the filtered node, and a
+        // blur samples pixels around its input bounds. Until those dependencies
+        // are represented in damage propagation, effects conservatively repaint
+        // the complete scene so partial damage cannot leave stale edges.
+        var damage = ContainsBlurLayer(rootLayer)
+            ? DamageRegion.Full(layout.Size)
+            : context.Damage;
         return new RenderScene(
             layout.Size,
             context.Options.ClearColor,
             rootLayer,
-            context.Damage,
+            damage,
             new RenderStatistics(
                 rootLayer.CountCommands(),
                 reusedBoundaries,
@@ -75,40 +81,6 @@ public sealed class DefaultRenderSceneComposer : IRenderSceneComposer {
             invalidatePaintCache: false,
             ref reusedBoundaries,
             ref repaintedBoundaries);
-    }
-
-    private RenderLayer AppendBoundary(
-        LayoutNode layoutNode,
-        RenderOptions options,
-        bool invalidatePaintCache,
-        bool cacheRaster,
-        ref int reusedBoundaries,
-        ref int repaintedBoundaries) {
-        var node = layoutNode.Node;
-        if (!invalidatePaintCache &&
-            _boundaryCaches.TryGetValue(node, out var cache) &&
-            cache.IsValid(layoutNode, options)) {
-            reusedBoundaries++;
-            return cache.Layer;
-        }
-
-        repaintedBoundaries++;
-        var contentLayer = AppendNodeContent(
-            layoutNode,
-            options,
-            invalidatePaintCache,
-            ref reusedBoundaries,
-            ref repaintedBoundaries);
-        var layer = cacheRaster
-            ? new RetainedLayer(layoutNode.Bounds, contentLayer)
-            : contentLayer;
-        _boundaryCaches[node] = new BoundaryLayerCache(
-            node.SubtreePaintRevision,
-            layoutNode.Bounds,
-            layoutNode.ClipBounds,
-            options.DrawDebugBounds,
-            layer);
-        return layer;
     }
 
     private RenderLayer AppendNodeContent(
@@ -166,11 +138,46 @@ public sealed class DefaultRenderSceneComposer : IRenderSceneComposer {
             }
         }
 
-        return WrapLayer(
+        var style = _styleEngine.ResolveReadOnly(element);
+        List<RenderCommand>? overlayCommands = null;
+        if (element is IOverlayRenderCommandProvider overlayProvider) {
+            overlayCommands = [];
+            overlayProvider.AppendOverlayRenderCommands(
+                new RenderCommandContext(
+                    bounds,
+                    style.BorderRadius,
+                    ApplyOpacity(style.Foreground, style.Opacity),
+                    style.FontSize,
+                    style.Padding,
+                    style.Font,
+                    _textLayout,
+                    _styleEngine),
+                style,
+                overlayCommands);
+        }
+
+        var layer = WrapLayer(
             commands,
             children,
             clip,
-            scrollTransform);
+            scrollTransform,
+            overlayCommands);
+        if (style.BackdropBlurRadius > 0) {
+            layer = new BackdropBlurLayer(
+                style.BackdropBlurRadius,
+                bounds,
+                style.BorderRadius,
+                layer);
+        }
+
+        if (style.FilterBlurRadius > 0) {
+            layer = new BlurLayer(
+                style.FilterBlurRadius,
+                bounds,
+                layer);
+        }
+
+        return layer;
     }
 
     private void AppendElementContent(
@@ -180,8 +187,7 @@ public sealed class DefaultRenderSceneComposer : IRenderSceneComposer {
         RenderOptions options) {
         var style = _styleEngine.ResolveReadOnly(element);
         var background = style.Background;
-        var genericBackground = ControlValueParser.ReadColor(
-            element.Attributes.GetValueOrDefault("background"));
+        var genericBackground = element.Attributes.GetValueOrDefault("background") as Color?;
         if (element is Control { Background: { } explicitBackground }) {
             background = explicitBackground;
         } else if (genericBackground is { } parsedBackground) {
@@ -234,89 +240,9 @@ public sealed class DefaultRenderSceneComposer : IRenderSceneComposer {
                     style.FontSize,
                     style.Padding,
                     style.Font,
-                    _textLayout),
-                commands);
-        }
-    }
-
-    private void AppendTextNode(
-        List<RenderCommand> commands,
-        TextNode text,
-        Rect bounds) {
-        var fontSize = Math.Max(
-            _styleEngine.Metrics.Font(10),
-            Math.Min(
-                _styleEngine.Metrics.Font(UiMetrics.DefaultFontSize),
-                bounds.Height - _styleEngine.Metrics.Space(1)));
-        if (_textLayout is not null) {
-            var shaped = _textLayout.Layout(
-                text.Text,
-                new TextLayoutOptions(fontSize, Math.Max(1, bounds.Width)));
-            AppendShapedText(
-                commands,
-                shaped,
-                bounds,
-                new Color(232, 238, 242),
-                TextHorizontalAlignment.Start,
-                TextVerticalAlignment.Center);
-        } else {
-            commands.Add(new DrawTextCommand(
-                text.Text,
-                bounds,
-                new Color(232, 238, 242),
-                fontSize,
-                TextHorizontalAlignment.Start,
-                TextVerticalAlignment.Center));
-        }
-    }
-
-    private void AppendControlText(
-        List<RenderCommand> commands,
-        ITextContentControl control,
-        Rect bounds,
-        ResolvedStyle style,
-        bool wrap) {
-        var textBounds = new Rect(
-            bounds.X + style.Padding,
-            bounds.Y,
-            Math.Max(1, bounds.Width - (style.Padding * 2)),
-            bounds.Height);
-        var fontSize = Math.Max(
-            _styleEngine.Metrics.Font(10),
-            Math.Min(
-                style.FontSize,
-                bounds.Height - _styleEngine.Metrics.Space(1)));
-        if (_textLayout is not null) {
-            var displayText = wrap
-                ? control.Text
-                : TextFitting.FitSingleLine(
                     _textLayout,
-                    control.Text,
-                    fontSize,
-                    style.Font,
-                    textBounds.Width);
-            var shaped = _textLayout.Layout(
-                displayText,
-                new TextLayoutOptions(
-                    fontSize,
-                    wrap ? textBounds.Width : float.PositiveInfinity,
-                    font: style.Font));
-            AppendShapedText(
-                commands,
-                shaped,
-                textBounds,
-                ApplyOpacity(style.Foreground, style.Opacity),
-                style.TextHorizontalAlignment,
-                style.TextVerticalAlignment);
-        } else {
-            commands.Add(new DrawTextCommand(
-                control.Text,
-                textBounds,
-                ApplyOpacity(style.Foreground, style.Opacity),
-                fontSize,
-                style.TextHorizontalAlignment,
-                style.TextVerticalAlignment,
-                style.Font));
+                    _styleEngine),
+                commands);
         }
     }
 
@@ -324,7 +250,8 @@ public sealed class DefaultRenderSceneComposer : IRenderSceneComposer {
         List<RenderCommand> commands,
         List<RenderLayer> children,
         Rect? clip,
-        IScrollTransform? scrollTransform = null) {
+        IScrollTransform? scrollTransform = null,
+        List<RenderCommand>? overlayCommands = null) {
         var layers = new List<RenderLayer>(2);
         if (commands.Count != 0) {
             layers.Add(new ContentLayer(commands));
@@ -345,6 +272,10 @@ public sealed class DefaultRenderSceneComposer : IRenderSceneComposer {
             layers.Add(childLayer);
         }
 
+        if (overlayCommands is { Count: > 0 }) {
+            layers.Add(new ContentLayer(overlayCommands));
+        }
+
         RenderLayer result = layers.Count switch {
             0 => EmptyLayer,
             1 => layers[0],
@@ -361,66 +292,6 @@ public sealed class DefaultRenderSceneComposer : IRenderSceneComposer {
             color.Green,
             color.Blue,
             (byte)Math.Clamp(color.Alpha * opacity, 0, 255));
-    }
-
-    private static void AppendShapedText(
-        List<RenderCommand> commands,
-        ShapedText text,
-        Rect bounds,
-        Color color,
-        TextHorizontalAlignment horizontalAlignment,
-        TextVerticalAlignment verticalAlignment) {
-        var top = verticalAlignment switch {
-            TextVerticalAlignment.Top => bounds.Y,
-            TextVerticalAlignment.Bottom => bounds.Bottom - text.Height,
-            _ => bounds.Y + ((bounds.Height - text.Height) / 2),
-        };
-        foreach (var line in text.Lines) {
-            var lineWidth = Math.Max(0, line.Width);
-            var lineX = horizontalAlignment switch {
-                TextHorizontalAlignment.Center => (bounds.Width - lineWidth) / 2,
-                TextHorizontalAlignment.End => bounds.Width - lineWidth,
-                _ => 0,
-            };
-            foreach (var run in line.Runs) {
-                commands.Add(new DrawGlyphRunCommand(
-                    new Rect(
-                        bounds.X + lineX,
-                        top,
-                        lineWidth,
-                        line.Height),
-                    run,
-                    top + line.Ascent,
-                    color,
-                    bounds.X + lineX));
-            }
-
-            top += line.Height;
-        }
-    }
-
-    private void RemoveStaleCaches(LayoutSnapshot layout) {
-        if (_boundaryCaches.Count == 0) {
-            return;
-        }
-
-        List<Node>? stale = null;
-        foreach (var node in _boundaryCaches.Keys) {
-            if (layout.Contains(node)) {
-                continue;
-            }
-
-            stale ??= [];
-            stale.Add(node);
-        }
-
-        if (stale is null) {
-            return;
-        }
-
-        foreach (var node in stale) {
-            _boundaryCaches.Remove(node);
-        }
     }
 
 }

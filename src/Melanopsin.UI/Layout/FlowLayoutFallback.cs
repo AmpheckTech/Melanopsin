@@ -221,7 +221,7 @@ internal sealed class FlowLayoutFallback {
 
                 if (horizontal) {
                     childWidth += weightShare;
-                    var y = AlignY(
+                    var y = LayoutMath.AlignY(
                         content,
                         childHeight,
                         childStyle.Anchor,
@@ -240,7 +240,7 @@ internal sealed class FlowLayoutFallback {
                         descendantClip));
                 } else {
                     childHeight += weightShare;
-                    var x = AlignX(
+                    var x = LayoutMath.AlignX(
                         content,
                         childWidth,
                         childStyle.Anchor,
@@ -270,38 +270,7 @@ internal sealed class FlowLayoutFallback {
     private float ResolveSpacing(Element element) {
         var metrics = _engine.Metrics;
         return element is ILinearLayoutContainer layout
-            ? layout.Spacing.Resolve(
-                metrics,
-                available: 0,
-                fallback: metrics.Space(1))
+            ? LayoutMath.ResolveGap(layout.Spacing, metrics)
             : metrics.Space(1);
-    }
-
-    private static float AlignX(
-        Rect content,
-        float width,
-        Anchor anchor,
-        float margin) {
-        return anchor switch {
-            Anchor.Top or Anchor.Center or Anchor.Bottom =>
-                content.X + ((content.Width - width) / 2),
-            Anchor.TopRight or Anchor.Right or Anchor.BottomRight =>
-                content.Right - width - margin,
-            _ => content.X + margin,
-        };
-    }
-
-    private static float AlignY(
-        Rect content,
-        float height,
-        Anchor anchor,
-        float margin) {
-        return anchor switch {
-            Anchor.Left or Anchor.Center or Anchor.Right =>
-                content.Y + ((content.Height - height) / 2),
-            Anchor.BottomLeft or Anchor.Bottom or Anchor.BottomRight =>
-                content.Bottom - height - margin,
-            _ => content.Y + margin,
-        };
     }
 }

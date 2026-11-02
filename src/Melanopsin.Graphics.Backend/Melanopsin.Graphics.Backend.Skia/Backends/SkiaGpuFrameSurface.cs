@@ -36,17 +36,19 @@ internal sealed class SkiaGpuFrameSurface(
         ReadOnlySpan<byte> pixels,
         int stride) {
         if (owner.GpuContext is not { } gpuContext ||
+            size.Width > int.MaxValue / 4 ||
             stride != size.Width * 4) {
             return false;
         }
 
         var width = size.Width;
         var height = size.Height;
-        if (pixels.Length < stride * height) {
+        var byteCount = (long)stride * height;
+        if (pixels.Length < byteCount) {
             return false;
         }
 
-        var copy = pixels[..(stride * height)].ToArray();
+        var copy = pixels[..(int)byteCount].ToArray();
         gpuContext.UploadTexture(
             target,
             copy,

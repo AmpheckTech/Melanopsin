@@ -164,7 +164,7 @@ public sealed class RadioButton :
             case "group":
                 Group = value?.ToString() ?? "default";
                 break;
-            case "selected" when ControlValueParser.ReadBoolean(value) == true:
+            case "selected" when value is true:
                 IsSelected = true;
                 Accessibility.Value = "selected";
                 break;

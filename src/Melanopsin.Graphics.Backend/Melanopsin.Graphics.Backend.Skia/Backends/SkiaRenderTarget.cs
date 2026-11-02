@@ -2,7 +2,7 @@ using SkiaSharp;
 
 namespace Melanopsin.Graphics.Backend.Skia;
 
-internal sealed class SkiaRenderTarget :
+internal sealed partial class SkiaRenderTarget :
     IResizableRenderTarget {
     private SKBitmap? _bitmap;
     private SKSurface? _gpuSurface;
@@ -104,127 +104,6 @@ internal sealed class SkiaRenderTarget :
         _pixelReader.ResizeCpu(size, bitmap);
         _hasFrame = false;
         return true;
-    }
-
-    private bool TryResizeGpu(RenderTargetDescriptor descriptor) {
-        if (_gpuContext is not { } gpuContext ||
-            _gpuTarget is not { } currentTarget ||
-            _gpuBackendRenderTarget is null ||
-            _gpuSurface is null) {
-            return false;
-        }
-
-        var size = descriptor.Size;
-
-        try {
-            gpuContext.MakeCurrent();
-            var target = gpuContext.ResizeTextureTarget(
-                currentTarget,
-                size.Width,
-                size.Height);
-
-            // The texture has a capacity with slack (see TextureCapacity).
-            // Most interactive-resize steps therefore stay inside the same
-            // storage allocation. In that case there is no need to recreate
-            // the Skia surface; only the logical viewport changes. The canvas
-            // is clipped to Descriptor.Size below so the extra capacity cannot
-            // leak into the presented frame.
-            if (CanReuseGpuSurface(currentTarget, target)) {
-                _gpuTarget = target;
-                _pixelReader.ResizeGpu(size, _gpuSurface);
-                Descriptor = descriptor;
-                _hasFrame = false;
-                return true;
-            }
-
-            GRBackendRenderTarget? backendRenderTarget = null;
-            SKSurface? surface = null;
-            try {
-                backendRenderTarget = CreateGpuBackendRenderTarget(target);
-                surface = CreateGpuSurface(gpuContext, backendRenderTarget);
-            } catch {
-                surface?.Dispose();
-                backendRenderTarget?.Dispose();
-                return false;
-            }
-
-            var previousTarget = currentTarget;
-            var previousBackendRenderTarget = _gpuBackendRenderTarget;
-            var previousSurface = _gpuSurface;
-
-            // Commit the new target only after its backend resources were
-            // created successfully. Cleanup of the old resources is
-            // best-effort: a native cleanup failure must not roll the target
-            // back to a partially disposed surface. Report it from Dispose.
-            _gpuTarget = target;
-            _gpuBackendRenderTarget = backendRenderTarget;
-            _gpuSurface = surface;
-            _canvas = surface.Canvas;
-            _pixelReader.ResizeGpu(size, surface);
-            Descriptor = descriptor;
-            _hasFrame = false;
-
-            Exception? cleanupFailure = null;
-            SkiaCleanup.Capture(ref cleanupFailure, previousSurface.Dispose);
-            SkiaCleanup.Capture(
-                ref cleanupFailure,
-                previousBackendRenderTarget.Dispose);
-            if (previousTarget.TextureId != target.TextureId ||
-                previousTarget.FramebufferId != target.FramebufferId) {
-                SkiaCleanup.Capture(
-                    ref cleanupFailure,
-                    () => gpuContext.DeleteTextureTarget(previousTarget));
-            }
-
-            if (cleanupFailure is not null) {
-                _pendingCleanupFailure = _pendingCleanupFailure is null
-                    ? cleanupFailure
-                    : new AggregateException(
-                        _pendingCleanupFailure,
-                        cleanupFailure);
-            }
-
-            return true;
-        } catch {
-            // The replacement path in Window.Resize will dispose this target.
-            return false;
-        }
-    }
-
-    private bool CanReuseGpuSurface(
-        SkiaGpuRenderTargetHandle currentTarget,
-        SkiaGpuRenderTargetHandle target) {
-        return target.TextureId == currentTarget.TextureId &&
-            target.FramebufferId == currentTarget.FramebufferId &&
-            target.Width == currentTarget.Width &&
-            target.Height == currentTarget.Height &&
-            _gpuBackendRenderTarget is { } backendRenderTarget &&
-            backendRenderTarget.Width == target.Width &&
-            backendRenderTarget.Height == target.Height;
-    }
-
-    private static GRBackendRenderTarget CreateGpuBackendRenderTarget(
-        SkiaGpuRenderTargetHandle target) {
-        return new GRBackendRenderTarget(
-            target.Width,
-            target.Height,
-            sampleCount: 0,
-            stencilBits: 0,
-            glInfo: new GRGlFramebufferInfo(
-                target.FramebufferId,
-                WglNative.GlRgba8));
-    }
-
-    private static SKSurface CreateGpuSurface(
-        ISkiaGpuContext gpuContext,
-        GRBackendRenderTarget backendRenderTarget) {
-        return SKSurface.Create(
-            gpuContext.GpuContext,
-            backendRenderTarget,
-            GRSurfaceOrigin.TopLeft,
-            SKColorType.Bgra8888) ??
-            throw new InvalidOperationException(
-                "Skia could not create a GPU-backed window surface.");
     }
 
     public RenderFrame Render(RenderScene scene) {

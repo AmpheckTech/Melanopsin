@@ -1,6 +1,4 @@
 using System;
-using System.Globalization;
-using System.Linq;
 using Melanopsin.UI.Markup.Compiler.Diagnostics;
 using Melanopsin.UI.Markup.Compiler.Parsing;
 using Melanopsin.UI.Markup.Compiler.Schema;
@@ -9,7 +7,7 @@ using Microsoft.CodeAnalysis.CSharp;
 
 namespace Melanopsin.UI.Markup.Compiler.Validation;
 
-internal static class MarkupValidator {
+internal static partial class MarkupValidator {
     public static IReadOnlyList<MarkupDiagnostic> Validate(
         MarkupDocument document,
         ControlCatalog controls) {
@@ -32,10 +30,11 @@ internal static class MarkupValidator {
                 1));
         }
 
+        var resolver = new MarkupControlResolver(document, controls);
         var referenceNames = new HashSet<string>(StringComparer.Ordinal);
         foreach (var node in document.Nodes) {
             ValidateNode(
-                controls,
+                resolver,
                 node,
                 isDynamic: false,
                 referenceNames,
@@ -46,7 +45,7 @@ internal static class MarkupValidator {
     }
 
     private static void ValidateNode(
-        ControlCatalog controls,
+        MarkupControlResolver resolver,
         MarkupNode node,
         bool isDynamic,
         HashSet<string> referenceNames,
@@ -54,14 +53,14 @@ internal static class MarkupValidator {
         switch (node) {
             case MarkupElement element:
                 ValidateElement(
-                    controls,
+                    resolver,
                     element,
                     isDynamic,
                     referenceNames,
                     diagnostics);
                 foreach (var child in element.Children) {
                     ValidateNode(
-                        controls,
+                        resolver,
                         child,
                         isDynamic,
                         referenceNames,
@@ -78,7 +77,7 @@ internal static class MarkupValidator {
                 ValidateExpression(conditional.Condition, conditional.Offset, diagnostics);
                 foreach (var child in conditional.WhenTrue) {
                     ValidateNode(
-                        controls,
+                        resolver,
                         child,
                         isDynamic: true,
                         referenceNames,
@@ -87,7 +86,7 @@ internal static class MarkupValidator {
 
                 foreach (var child in conditional.WhenFalse) {
                     ValidateNode(
-                        controls,
+                        resolver,
                         child,
                         isDynamic: true,
                         referenceNames,
@@ -104,7 +103,7 @@ internal static class MarkupValidator {
 
                 foreach (var child in loop.Body) {
                     ValidateNode(
-                        controls,
+                        resolver,
                         child,
                         isDynamic: true,
                         referenceNames,
@@ -113,7 +112,7 @@ internal static class MarkupValidator {
 
                 foreach (var child in loop.EmptyBody) {
                     ValidateNode(
-                        controls,
+                        resolver,
                         child,
                         isDynamic: true,
                         referenceNames,
@@ -134,7 +133,7 @@ internal static class MarkupValidator {
                         diagnostics);
                     foreach (var child in switchCase.Body) {
                         ValidateNode(
-                            controls,
+                            resolver,
                             child,
                             isDynamic: true,
                             referenceNames,
@@ -144,7 +143,7 @@ internal static class MarkupValidator {
 
                 foreach (var child in switchBlock.DefaultBody) {
                     ValidateNode(
-                        controls,
+                        resolver,
                         child,
                         isDynamic: true,
                         referenceNames,
@@ -153,170 +152,6 @@ internal static class MarkupValidator {
 
                 break;
         }
-    }
-
-    private static void ValidateElement(
-        ControlCatalog controls,
-        MarkupElement element,
-        bool isDynamic,
-        HashSet<string> referenceNames,
-        List<MarkupDiagnostic> diagnostics) {
-        var control = controls.Find(element.Name);
-        if (control is null) {
-            diagnostics.Add(new MarkupDiagnostic(
-                MarkupDiagnosticCodes.UnknownControl,
-                $"Unknown control '{element.Name}'.",
-                element.Offset,
-                Math.Max(1, element.Name.Length + 1)));
-        }
-
-        foreach (var attribute in element.Attributes) {
-            if (MarkupSchema.IsReferenceAttribute(attribute)) {
-                ValidateReference(
-                    element,
-                    attribute,
-                    isDynamic,
-                    referenceNames,
-                    diagnostics);
-                continue;
-            }
-
-            var definition = control is not null &&
-                             control.Attributes.TryGetValue(attribute.Name, out var found)
-                ? found
-                : null;
-            if (control is not null && definition is null) {
-                diagnostics.Add(new MarkupDiagnostic(
-                    MarkupDiagnosticCodes.UnknownAttribute,
-                    $"Control '{element.Name}' does not support attribute '{attribute.Name}'.",
-                    attribute.Offset,
-                    attribute.Name.Length));
-            }
-
-            foreach (var part in attribute.Parts.Where(static part => part.IsExpression)) {
-                ValidateExpression(part.Value, attribute.Offset, diagnostics);
-            }
-
-            ValidateStaticValue(element, attribute, definition, diagnostics);
-        }
-    }
-
-    private static void ValidateReference(
-        MarkupElement element,
-        MarkupAttribute attribute,
-        bool isDynamic,
-        HashSet<string> referenceNames,
-        List<MarkupDiagnostic> diagnostics) {
-        if (!MarkupReference.TryParse(attribute, out var reference)) {
-            diagnostics.Add(new MarkupDiagnostic(
-                MarkupDiagnosticCodes.InvalidReference,
-                $"Reference on <{element.Name}> must be a valid C# identifier.",
-                attribute.Offset,
-                Math.Max(1, attribute.Name.Length)));
-            return;
-        }
-
-        if (isDynamic) {
-            diagnostics.Add(new MarkupDiagnostic(
-                MarkupDiagnosticCodes.InvalidReference,
-                $"Reference '{reference.Name}' cannot be declared inside conditional or repeated markup.",
-                attribute.Offset,
-                Math.Max(1, attribute.Name.Length)));
-            return;
-        }
-
-        if (!referenceNames.Add(reference.Name)) {
-            diagnostics.Add(new MarkupDiagnostic(
-                MarkupDiagnosticCodes.InvalidReference,
-                $"Reference '{reference.Name}' is declared more than once.",
-                attribute.Offset,
-                Math.Max(1, attribute.Name.Length)));
-        }
-    }
-
-    private static void ValidateStaticValue(
-        MarkupElement element,
-        MarkupAttribute attribute,
-        MarkupAttributeDefinition? definition,
-        List<MarkupDiagnostic> diagnostics) {
-        if (definition is null ||
-            attribute.Parts.Any(static part => part.IsExpression || part.IsResource) ||
-            attribute.Parts.Count != 1) {
-            return;
-        }
-
-        var value = attribute.Parts[0].Value;
-        if (definition.ValueKind == SchemaValueKind.Number &&
-            !float.TryParse(
-                value,
-                NumberStyles.Float,
-                CultureInfo.InvariantCulture,
-                out _)) {
-            ReportValueError(element, attribute, value, diagnostics);
-        }
-
-        if (definition.ValueKind == SchemaValueKind.Length &&
-            !IsValidLength(value)) {
-            ReportValueError(element, attribute, value, diagnostics);
-        }
-
-        if (definition.ValueKind == SchemaValueKind.Integer &&
-            !int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out _)) {
-            ReportValueError(element, attribute, value, diagnostics);
-        }
-
-        if (definition.ValueKind == SchemaValueKind.Boolean && !bool.TryParse(value, out _)) {
-            ReportValueError(element, attribute, value, diagnostics);
-        }
-
-        if (definition.ValueKind == SchemaValueKind.Enum &&
-            !definition.AllowedValues.Contains(value, StringComparer.OrdinalIgnoreCase)) {
-            ReportValueError(element, attribute, value, diagnostics);
-        }
-
-        if (definition.ValueKind == SchemaValueKind.Input &&
-            !value.Equals("none", StringComparison.OrdinalIgnoreCase) &&
-            !value.Equals("auto", StringComparison.OrdinalIgnoreCase)) {
-            ReportValueError(element, attribute, value, diagnostics);
-        }
-    }
-
-    private static void ReportValueError(
-        MarkupElement element,
-        MarkupAttribute attribute,
-        string value,
-        List<MarkupDiagnostic> diagnostics) {
-        diagnostics.Add(new MarkupDiagnostic(
-            MarkupDiagnosticCodes.InvalidAttributeValue,
-            $"Invalid value '{value}' for {element.Name}.{attribute.Name}.",
-            attribute.Offset,
-            attribute.Name.Length));
-    }
-
-    private static bool IsValidLength(string value) {
-        if (string.Equals(value.Trim(), "auto", StringComparison.OrdinalIgnoreCase)) {
-            return true;
-        }
-
-        var normalized = value.Trim();
-        var suffixes = new[] {
-            "rem", "su", "ru", "fu", "iu", "hx", "vw", "vh", "fr", "em", "dp", "sp", "pt", "px", "%",
-        };
-        foreach (var suffix in suffixes) {
-            if (!normalized.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) {
-                continue;
-            }
-
-            normalized = normalized.Substring(0, normalized.Length - suffix.Length);
-            break;
-        }
-
-        return float.TryParse(
-                   normalized,
-                   NumberStyles.Float,
-                   CultureInfo.InvariantCulture,
-                   out var length) &&
-               length >= 0;
     }
 
     private static void ValidateExpression(

@@ -23,7 +23,7 @@ internal static class ControlTypeDiscovery {
                          .DescendantNodes()
                          .OfType<TypeDeclarationSyntax>()) {
                 if (semanticModel.GetDeclaredSymbol(declaration, cancellationToken) is INamedTypeSymbol type &&
-                    HasMarkupElement(type) &&
+                    HasMarkupAttribute(type) &&
                     seen.Add(type)) {
                     yield return type;
                 }
@@ -38,7 +38,7 @@ internal static class ControlTypeDiscovery {
             }
 
             foreach (var type in EnumerateTypes(assembly.GlobalNamespace, cancellationToken)) {
-                if (HasMarkupElement(type) && seen.Add(type)) {
+                if (HasMarkupAttribute(type) && seen.Add(type)) {
                     yield return type;
                 }
             }
@@ -81,8 +81,10 @@ internal static class ControlTypeDiscovery {
         }
     }
 
-    private static bool HasMarkupElement(INamedTypeSymbol type) {
+    private static bool HasMarkupAttribute(INamedTypeSymbol type) {
         return type.GetAttributes().Any(static attribute =>
-            attribute.AttributeClass?.ToDisplayString() == MarkupMetadataNames.MarkupElementAttribute);
+            attribute.AttributeClass?.ToDisplayString() is
+                MarkupMetadataNames.MarkupElementAttribute or
+                MarkupMetadataNames.MarkupComponentAttribute);
     }
 }

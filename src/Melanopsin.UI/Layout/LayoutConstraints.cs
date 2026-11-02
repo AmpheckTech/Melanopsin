@@ -9,13 +9,19 @@ public readonly record struct LayoutConstraints {
         float minWidth,
         float maxWidth,
         float minHeight,
-        float maxHeight) {
+        float maxHeight,
+        float? widthReference = null,
+        float? heightReference = null) {
         ValidateAxis(minWidth, maxWidth, nameof(minWidth), nameof(maxWidth));
         ValidateAxis(minHeight, maxHeight, nameof(minHeight), nameof(maxHeight));
+        ValidateReference(widthReference, nameof(widthReference));
+        ValidateReference(heightReference, nameof(heightReference));
         MinWidth = minWidth;
         MaxWidth = maxWidth;
         MinHeight = minHeight;
         MaxHeight = maxHeight;
+        WidthReference = widthReference;
+        HeightReference = heightReference;
     }
 
     public float MinWidth { get; }
@@ -25,6 +31,18 @@ public readonly record struct LayoutConstraints {
     public float MinHeight { get; }
 
     public float MaxHeight { get; }
+
+    /// <summary>
+    /// The containing block used to resolve relative widths when the maximum
+    /// width is unbounded. A bounded maximum already provides this reference.
+    /// </summary>
+    public float? WidthReference { get; }
+
+    /// <summary>
+    /// The containing block used to resolve relative heights when the maximum
+    /// height is unbounded. A bounded maximum already provides this reference.
+    /// </summary>
+    public float? HeightReference { get; }
 
     public bool HasBoundedWidth => float.IsFinite(MaxWidth);
 
@@ -40,8 +58,18 @@ public readonly record struct LayoutConstraints {
         0,
         float.PositiveInfinity);
 
-    public static LayoutConstraints Loose(float maxWidth, float maxHeight) {
-        return new LayoutConstraints(0, maxWidth, 0, maxHeight);
+    public static LayoutConstraints Loose(
+        float maxWidth,
+        float maxHeight,
+        float? widthReference = null,
+        float? heightReference = null) {
+        return new LayoutConstraints(
+            0,
+            maxWidth,
+            0,
+            maxHeight,
+            widthReference,
+            heightReference);
     }
 
     public static LayoutConstraints Tight(LayoutSize size) {
@@ -50,11 +78,6 @@ public readonly record struct LayoutConstraints {
 
     public static LayoutConstraints Tight(float width, float height) {
         return new LayoutConstraints(width, width, height, height);
-    }
-
-    public static LayoutConstraints FromMeasureConstraint(
-        MeasureConstraint constraint) {
-        return Loose(constraint.MaxWidth, constraint.MaxHeight);
     }
 
     public LayoutSize Constrain(LayoutSize size) {
@@ -78,7 +101,13 @@ public readonly record struct LayoutConstraints {
             Math.Max(0, MinWidth - horizontal),
             Math.Max(0, MaxWidth - horizontal),
             Math.Max(0, MinHeight - vertical),
-            Math.Max(0, MaxHeight - vertical));
+            Math.Max(0, MaxHeight - vertical),
+            WidthReference is { } widthReference
+                ? Math.Max(0, widthReference - horizontal)
+                : null,
+            HeightReference is { } heightReference
+                ? Math.Max(0, heightReference - vertical)
+                : null);
     }
 
     private static void ValidateAxis(
@@ -102,6 +131,16 @@ public readonly record struct LayoutConstraints {
                 maximumName,
                 maximum,
                 "A maximum size must be non-negative and at least the minimum.");
+        }
+    }
+
+    private static void ValidateReference(float? reference, string parameterName) {
+        if (reference is { } value &&
+            (!float.IsFinite(value) || value < 0)) {
+            throw new ArgumentOutOfRangeException(
+                parameterName,
+                reference,
+                "A percentage reference must be finite and non-negative.");
         }
     }
 }

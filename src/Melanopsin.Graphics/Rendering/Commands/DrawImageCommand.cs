@@ -11,13 +11,13 @@ public sealed class DrawImageCommand : RenderCommand {
         ReadOnlyMemory<byte> pixels,
         float cornerRadius = 0) {
         ArgumentOutOfRangeException.ThrowIfNegative(cornerRadius);
-        if (stride < size.Width * 4) {
+        if (stride < checked(size.Width * 4)) {
             throw new ArgumentOutOfRangeException(
                 nameof(stride),
                 "The stride must hold at least one four-byte pixel per column.");
         }
 
-        if (pixels.Length < stride * size.Height) {
+        if (pixels.Length < (long)stride * size.Height) {
             throw new ArgumentException(
                 "The pixel buffer is smaller than stride multiplied by height.",
                 nameof(pixels));

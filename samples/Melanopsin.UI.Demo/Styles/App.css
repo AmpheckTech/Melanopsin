@@ -1,52 +1,535 @@
-.app { background: #f4f7f5; color: #15251f; }
-.canvas { background: transparent; padding: 6su; }
-.card {
-    background: #ffffff;
-    color: #15251f;
-    border-color: #d9e4df;
-    border-width: 1hx;
-    border-radius: 6ru;
-    padding: 4su;
+@import "Material.css";
+
+@tokens {
+    app-background: color = #0f1211;
+    chrome: color = #151917;
+    canvas: color = #0b0f0d;
+    surface: color = #191e1c;
+    surface-raised: color = #202622;
+    surface-soft: color = #171c1a;
+    border: color = #2a312e;
+    border-strong: color = #3c4742;
+    ink: color = #e5e9e6;
+    strong-ink: color = #f3f5f4;
+    muted-ink: color = #a0aaa5;
+    faint-ink: color = #737e78;
+    accent: color = #8bc5aa;
+    accent-soft: color = #2a473c;
+    accent-ink: color = #b8dccb;
+    selection: color = #9ac9b5;
+    hairline: length = 1hx;
+    radius-control: length = 1.5ru;
+    radius-panel: length = 2.5ru;
+    body-size: length = 11fu;
+    small-size: length = 9fu;
+    caption-size: length = 8.5fu;
+    title-size: length = 24fu;
+    detail-size: length = 12fu;
+    motion-duration: duration = 120ms;
 }
-.header { background: transparent; }
-.eyebrow { color: #60776e; font-size: 10fu; }
-.title { color: #14251f; font-size: 25fu; }
-.intro { color: #62746d; font-size: 13fu; }
-.label { color: #40574e; font-size: 12fu; }
-.value { color: #1f6d59; font-size: 12fu; text-align: end; }
-.field { width: 100%; }
-.state { background: #e3efe9; color: #236650; border-radius: 4ru; font-size: 11fu; }
-.preview {
-    background: #eef6f1;
-    border-color: #d6e8df;
-    border-width: 1hx;
-    border-radius: 4ru;
+
+Page,
+.app,
+.shell {
+    background: $app-background;
+    color: $ink;
+}
+
+.brand-name {
+    color: $strong-ink;
+    font-size: 12fu;
+    padding: 0px;
+}
+
+.rail {
+    background: $chrome;
+    border-color: $border;
+    border-width: $hairline;
+    padding: 0px;
+}
+
+.rail-brand {
+    background: transparent;
+    padding: 2su;
+    border-color: $border;
+    border-width: 0px;
+}
+
+.rail-caption {
+    color: $faint-ink;
+    font-size: $caption-size;
+    padding: 0px;
+}
+
+.rail-nav {
+    background: transparent;
+    padding: 2su;
+}
+
+.navigation-label {
+    color: $faint-ink;
+    font-size: $caption-size;
+    padding: 0.6su;
+}
+
+.main {
+    background: $app-background;
+    padding: 0px;
+}
+
+Button.nav-tab {
+    background: transparent;
+    color: $muted-ink;
+    border-width: 0px;
+    border-radius: $radius-control;
+    padding: 1.5su;
+    font-size: $body-size;
+    text-align: start;
+    cursor: pointer;
+    transition-duration: $motion-duration;
+
+    &:hover {
+        background: $surface-raised;
+        color: $ink;
+    }
+
+    &:pressed { background: #29302d; }
+
+    &.selected {
+        background: $surface-raised;
+        color: $strong-ink;
+        border-color: $border-strong;
+        border-width: $hairline;
+    }
+}
+
+.utility {
+    background: transparent;
+    padding: 2su;
+}
+
+.key {
+    background: $surface;
+    color: $muted-ink;
+    border-color: $border;
+    border-width: $hairline;
+    border-radius: 1ru;
+    padding: 0.8su;
+    font-size: $caption-size;
+    text-align: center;
+}
+
+.utility-label {
+    color: $faint-ink;
+    font-size: $caption-size;
+    padding: 0px;
+}
+
+ScrollViewport {
+    background: $app-background;
+    border-width: 0px;
+    padding: 0px;
+}
+
+ScrollViewport::track { background: transparent; }
+
+ScrollViewport::thumb {
+    background: $border-strong;
+    border-radius: 1su;
+    transition-duration: $motion-duration;
+    transition-easing: ease-out;
+}
+
+ScrollViewport::thumb:hover { background: $faint-ink; }
+ScrollViewport::thumb:pressed { background: $muted-ink; }
+
+.page-content {
+    background: $app-background;
     padding: 3su;
 }
-.preview-title { color: #163a2e; font-size: 18fu; }
-.preview-detail { color: #587168; font-size: 12fu; }
-.theme-note { color: #40574e; font-size: 12fu; }
-.tags { background: transparent; }
-.tag {
-    background: #dceee5;
-    color: #236650;
-    border-radius: 3ru;
-    padding: 1su 2su;
-    font-size: 10fu;
+
+.page-intro {
+    background: transparent;
+    padding: 0px;
+    border-color: $border;
+    border-width: 0px;
 }
-Button.primary {
-    width: 100%;
-    background: #1f6d59;
-    color: #ffffff;
-    border-radius: 4ru;
-    font-size: 14fu;
+
+.intro-copy { background: transparent; padding: 0px; }
+
+.eyebrow {
+    color: $accent;
+    font-size: $caption-size;
+    padding: 0px;
 }
-Button.primary:hover { background: #287d67; }
-Button.primary:pressed { background: #185746; }
-Input.field, ComboBox.field {
-    background: #fbfdfc;
-    border-color: #c8d8d1;
-    border-radius: 3ru;
+
+.page-title {
+    color: $strong-ink;
+    font-size: $title-size;
+    padding: 0.4su;
 }
-Input.field:focused, ComboBox.field:focused { border-color: #1f6d59; }
-CheckBox { font-size: 12fu; }
+
+.page-summary {
+    color: $muted-ink;
+    font-size: $body-size;
+    padding: 0.4su;
+}
+
+.run-info {
+    background: transparent;
+    padding: 0px;
+}
+
+.run-status {
+    color: $accent-ink;
+    font-size: $small-size;
+    text-align: end;
+    padding: 0px;
+}
+
+.run-note {
+    color: $faint-ink;
+    font-size: $caption-size;
+    text-align: end;
+    padding: 0px;
+}
+
+.sample {
+    background: transparent;
+    padding: 0.5su;
+    border-color: $border;
+    border-width: 0px;
+}
+
+.motion-stage,
+.three-stage {
+    background: $canvas;
+    border-color: $border;
+    border-width: $hairline;
+    border-radius: $radius-panel;
+    padding: 0px;
+}
+
+.ball-stage { background: transparent; }
+
+.glass-panel {
+    grid-row: 0;
+    grid-column: 0;
+    align-self: center;
+    width: 47%;
+    height: 34%;
+    padding: 2.8su;
+    background: #1a211ed6;
+    border-color: #56625c73;
+    border-width: $hairline;
+    border-radius: $radius-control;
+    backdrop-filter: blur(0.7su);
+}
+
+.glass-label {
+    color: $accent;
+    font-size: $caption-size;
+    padding: 0px;
+}
+
+.glass-title {
+    color: $strong-ink;
+    font-size: 17fu;
+    padding: 0px;
+    margin: 1su;
+}
+
+.glass-detail {
+    color: $muted-ink;
+    font-size: $small-size;
+    padding: 0px;
+}
+
+.three-view {
+    background: $canvas;
+    border-width: 0px;
+    border-radius: $radius-panel;
+}
+
+.scene-caption {
+    grid-row: 0;
+    grid-column: 0;
+    align-self: end;
+    width: 42%;
+    padding: 2su;
+    margin: 2su;
+    background: #111614d9;
+    border-color: #46524c73;
+    border-width: $hairline;
+    border-radius: $radius-control;
+    backdrop-filter: blur(0.45su);
+}
+
+.scene-title {
+    color: $strong-ink;
+    font-size: 12fu;
+    padding: 0px;
+}
+
+.scene-detail {
+    color: $muted-ink;
+    font-size: $caption-size;
+    padding: 0px;
+}
+
+.sample-footer {
+    background: transparent;
+    padding: 0px;
+}
+
+.playback-meta { background: transparent; padding: 0px; }
+.playback-dot { color: $accent; font-size: 8fu; padding: 0px; }
+
+.stage-meta {
+    color: $faint-ink;
+    font-size: $caption-size;
+    padding: 0px;
+}
+
+Button.quiet-action {
+    background: transparent;
+    color: $muted-ink;
+    border-color: $border;
+    border-width: $hairline;
+    border-radius: $radius-control;
+    padding: 1su;
+    font-size: $small-size;
+    text-align: center;
+    cursor: pointer;
+    transition-duration: $motion-duration;
+
+    &:hover {
+        background: $surface;
+        color: $ink;
+        border-color: $border-strong;
+    }
+
+    &:pressed { background: $surface-raised; }
+    &:focused { border-color: $selection; }
+
+    &.selected {
+        background: $accent-soft;
+        border-color: #557c6d;
+        color: $accent-ink;
+    }
+}
+
+.detail {
+    background: $surface-soft;
+    border-color: $border;
+    border-width: $hairline;
+    border-radius: $radius-control;
+    padding: 2.5su;
+}
+
+.detail-title {
+    color: $faint-ink;
+    font-size: $caption-size;
+    padding: 0px;
+}
+
+.detail-copy {
+    color: #bac2bd;
+    font-size: $body-size;
+    padding: 0px;
+}
+
+.type-sample,
+.layout-sample {
+    background: transparent;
+    padding: 0.5su;
+}
+
+.code-sample {
+    background: transparent;
+    padding: 0.5su;
+}
+
+.code-stage { background: transparent; padding: 0px; }
+
+.code-step-list,
+.code-readout {
+    background: $surface-soft;
+    border-color: $border;
+    border-width: $hairline;
+    border-radius: $radius-panel;
+    padding: 2su;
+}
+
+.code-readout { background: $surface; }
+
+Button.code-step {
+    background: transparent;
+    color: $muted-ink;
+    border-color: $border;
+    border-width: $hairline;
+    border-radius: $radius-control;
+    padding: 1.2su;
+    font-size: $small-size;
+    text-align: start;
+    cursor: pointer;
+    transition-duration: $motion-duration;
+
+    &:hover {
+        background: $surface;
+        color: $ink;
+        border-color: $border-strong;
+    }
+
+    &:pressed { background: $surface-raised; }
+    &:focused { border-color: $selection; }
+
+    &.selected {
+        background: $accent-soft;
+        border-color: #557c6d;
+        color: $accent-ink;
+    }
+}
+
+.code-progress {
+    color: $accent;
+    font-size: $caption-size;
+    padding: 0px;
+}
+
+.code-readout-title {
+    color: $strong-ink;
+    font-size: 13fu;
+    padding: 0px;
+}
+
+.code-readout-copy {
+    color: $muted-ink;
+    font-size: $small-size;
+    padding: 0px;
+}
+
+.type-card {
+    background: $surface-soft;
+    border-color: $border;
+    border-width: $hairline;
+    border-radius: $radius-panel;
+    padding: 2su;
+}
+
+.card-heading {
+    background: transparent;
+    padding: 0.8su;
+    border-color: $border;
+    border-width: 0px;
+}
+
+.section-title {
+    color: $strong-ink;
+    font-size: 12fu;
+    padding: 0px;
+}
+
+.type-row {
+    background: transparent;
+    padding: 1.1su;
+    border-color: #262d2a;
+    border-width: 0px;
+}
+
+.compact-row { padding: 0.85su; }
+
+.type-label {
+    color: $faint-ink;
+    font-size: $caption-size;
+    padding: 0px;
+}
+
+.type-display { color: $strong-ink; font-size: 21fu; padding: 0px; }
+.type-title { color: $strong-ink; font-size: 16fu; padding: 0px; }
+.type-lead { color: #cbd2ce; font-size: 12fu; padding: 0px; }
+.type-body { color: #bdc6c1; font-size: $body-size; padding: 0px; }
+.type-small { color: $muted-ink; font-size: $small-size; padding: 0px; }
+.type-caption { color: $faint-ink; font-size: $caption-size; padding: 0px; }
+.align-start { text-align: start; }
+.align-center { text-align: center; }
+.align-end { text-align: end; }
+
+.align-box {
+    background: $surface;
+    border-color: $border;
+    border-width: $hairline;
+    border-radius: 1ru;
+    padding: 1su;
+}
+
+.layout-toolbar,
+.stress-summary {
+    background: $surface-soft;
+    border-color: $border;
+    border-width: $hairline;
+    border-radius: $radius-control;
+    padding: 1.5su;
+}
+
+.stress-summary {
+    background: transparent;
+    border-width: 0px;
+    padding: 0.5su;
+}
+
+.stress-surface {
+    background: #141816;
+    border-color: $border;
+    border-width: $hairline;
+    border-radius: $radius-panel;
+    padding: 2su;
+}
+
+.chip-flow { background: transparent; padding: 0px; }
+
+.chip {
+    background: $surface-raised;
+    color: #aeb8b2;
+    border-color: #2e3733;
+    border-width: $hairline;
+    border-radius: 1ru;
+    padding: 0.8su;
+    font-size: $caption-size;
+    text-align: center;
+}
+
+.node-grid { background: #141816; }
+
+.node-card {
+    background: $surface;
+    border-color: #29312d;
+    border-width: $hairline;
+    border-radius: 1ru;
+    padding: 1.2su;
+}
+
+.node-title {
+    color: #c7cfca;
+    font-size: $small-size;
+    padding: 0px;
+}
+
+.node-detail {
+    color: $faint-ink;
+    font-size: $caption-size;
+    padding: 0px;
+}
+
+.nest {
+    background: #171c1a;
+    border-color: #252c29;
+    border-width: $hairline;
+    border-radius: 0.8ru;
+    padding: 0.7su;
+}
+
+Button:focused {
+    border-color: $selection;
+    border-width: $hairline;
+}

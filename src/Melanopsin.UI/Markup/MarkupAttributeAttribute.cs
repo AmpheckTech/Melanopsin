@@ -4,7 +4,7 @@ namespace Melanopsin.UI.Markup;
 /// Declares a markup attribute supported by an element or one of its properties.
 /// </summary>
 [AttributeUsage(
-    AttributeTargets.Class | AttributeTargets.Property,
+    AttributeTargets.Class | AttributeTargets.Property | AttributeTargets.Field,
     AllowMultiple = true,
     Inherited = true)]
 public sealed class MarkupAttributeAttribute : Attribute {

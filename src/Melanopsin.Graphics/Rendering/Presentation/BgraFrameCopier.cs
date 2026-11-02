@@ -27,7 +27,6 @@ public static class BgraFrameCopier {
             minimumStride);
 
         foreach (var rectangle in damage.Rects) {
-            ValidateRectangle(rectangle, damage.Size);
             var byteCount = rectangle.Width * BytesPerPixel;
             for (var row = rectangle.Y; row < rectangle.Bottom; row++) {
                 source
@@ -61,15 +60,4 @@ public static class BgraFrameCopier {
         }
     }
 
-    private static void ValidateRectangle(PixelRect rectangle, PixelSize size) {
-        if (rectangle.X < 0 ||
-            rectangle.Y < 0 ||
-            rectangle.Right > size.Width ||
-            rectangle.Bottom > size.Height) {
-            throw new ArgumentOutOfRangeException(
-                nameof(rectangle),
-                rectangle,
-                "Damage rectangles must be contained by the frame.");
-        }
-    }
 }

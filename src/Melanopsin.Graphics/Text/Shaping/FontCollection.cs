@@ -7,6 +7,7 @@ public sealed class FontCollection {
     private readonly Lock _gate = new();
     private readonly List<FontFace> _fonts = [];
     private readonly Dictionary<int, FontFace> _resolvedRunes = [];
+    private readonly Dictionary<int, FontFace> _resolvedEmojiRunes = [];
     private FontFace[] _fontSnapshot;
     private long _version;
 
@@ -40,24 +41,43 @@ public sealed class FontCollection {
             }
 
             _resolvedRunes.Clear();
+            _resolvedEmojiRunes.Clear();
         }
     }
 
     public FontFace Resolve(Rune rune) {
+        return Resolve(rune, preferEmoji: false);
+    }
+
+    /// <summary>
+    /// Chooses the face that draws <paramref name="rune"/>. With
+    /// <paramref name="preferEmoji"/> a colour face wins even when an earlier
+    /// face carries a monochrome glyph.
+    /// </summary>
+    public FontFace Resolve(Rune rune, bool preferEmoji) {
         lock (_gate) {
-            if (_resolvedRunes.TryGetValue(rune.Value, out var cached)) {
+            var cache = preferEmoji ? _resolvedEmojiRunes : _resolvedRunes;
+            if (cache.TryGetValue(rune.Value, out var cached)) {
                 return cached;
             }
 
+            FontFace? plainMatch = null;
             foreach (var font in _fonts) {
-                if (font.GetGlyphId(rune) != 0) {
-                    _resolvedRunes[rune.Value] = font;
+                if (font.GetGlyphId(rune) == 0) {
+                    continue;
+                }
+
+                if (!preferEmoji || font.HasColorGlyphs) {
+                    cache[rune.Value] = font;
                     return font;
                 }
+
+                plainMatch ??= font;
             }
 
-            _resolvedRunes[rune.Value] = Primary;
-            return Primary;
+            var resolved = plainMatch ?? Primary;
+            cache[rune.Value] = resolved;
+            return resolved;
         }
     }
 }

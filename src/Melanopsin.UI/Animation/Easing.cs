@@ -30,12 +30,6 @@ public abstract record Easing {
     /// <summary>
     /// Evaluates the easing curve for normalized progress.
     /// </summary>
-    /// <remarks>
-    /// Cubic-bezier curves resolve their time parameter to approximately
-    /// <c>1e-7</c>. Their output error can scale with the magnitude of the Y
-    /// control points, so this is a parameter-space tolerance rather than an
-    /// absolute output tolerance.
-    /// </remarks>
     public float Evaluate(float progress) {
         if (!float.IsFinite(progress)) {
             throw new ArgumentOutOfRangeException(

@@ -9,7 +9,8 @@ internal static class OpenGLFrameRenderer {
         uint readBuffer,
         ref byte[] readback,
         ref byte[] pixels) {
-        var length = checked(width * height * 4);
+        var rowBytes = checked(width * 4);
+        var length = checked(rowBytes * height);
         if (readback.Length != length) {
             readback = new byte[length];
             pixels = new byte[length];
@@ -29,7 +30,7 @@ internal static class OpenGLFrameRenderer {
         }
 
         OpenGLNative.glFinish();
-        ReadPixels(width, height, readBuffer, readback, pixels);
+        ReadPixels(width, height, readBuffer, readback, pixels, rowBytes);
         return pixels;
     }
 
@@ -66,7 +67,8 @@ internal static class OpenGLFrameRenderer {
         int height,
         uint readBuffer,
         byte[] readback,
-        byte[] pixels) {
+        byte[] pixels,
+        int rowBytes) {
         OpenGLNative.glReadBuffer(readBuffer);
         OpenGLNative.glPixelStorei(OpenGLNative.GlPackAlignment, 4);
         fixed (byte* destination = readback) {
@@ -80,7 +82,6 @@ internal static class OpenGLFrameRenderer {
                 (IntPtr)destination);
         }
 
-        var rowBytes = width * 4;
         for (var row = 0; row < height; row++) {
             readback.AsSpan(
                     (height - 1 - row) * rowBytes,

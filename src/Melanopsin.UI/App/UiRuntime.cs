@@ -3,40 +3,23 @@ using Melanopsin.UI.Threading;
 
 namespace Melanopsin.UI.App;
 
-public sealed class UiRuntime : IDisposable, IAsyncDisposable {
+public sealed partial class UiRuntime : IDisposable, IAsyncDisposable {
     private readonly object _gate = new();
     private readonly TaskCompletionSource<Exception?> _stopCompletion =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
-    private readonly Queue<UiLifecycleState> _lifecycleNotifications = new();
     private UiLifecycleState _lifecycle = UiLifecycleState.Created;
     private Task<Exception?>? _stopTask;
     private Exception? _preStopFailure;
     private Exception? _stopFailure;
     private bool _stopFinalizationStarted;
     private int _stopFinalizationThreadId;
-    private bool _lifecycleNotificationPumpActive;
     private bool _disposeRequested;
-    private Action<UiLifecycleState>? _lifecycleChanged;
 
     public UiRuntime(
         UiDispatcher? dispatcher = null,
         ResourceResolver? resources = null) {
         Dispatcher = dispatcher ?? new UiDispatcher();
         Resources = resources ?? new ResourceResolver();
-    }
-
-    public event Action<UiLifecycleState>? LifecycleChanged {
-        add {
-            lock (_gate) {
-                _lifecycleChanged += value;
-            }
-        }
-
-        remove {
-            lock (_gate) {
-                _lifecycleChanged -= value;
-            }
-        }
     }
 
     public UiDispatcher Dispatcher { get; }
@@ -100,10 +83,8 @@ public sealed class UiRuntime : IDisposable, IAsyncDisposable {
     }
 
     /// <summary>
-    /// Requests shutdown and waits until shutdown has finalized. Prefer
-    /// <see cref="StopAsync"/> from asynchronous code. An owner-thread reentrant
-    /// call returns without blocking because that same thread owns shutdown
-    /// finalization.
+    /// Requests shutdown and waits until it has finalized. Prefer
+    /// <see cref="StopAsync"/> from asynchronous code.
     /// </summary>
     public void Stop() {
         var stopTask = StopAsync();
@@ -115,10 +96,8 @@ public sealed class UiRuntime : IDisposable, IAsyncDisposable {
     }
 
     /// <summary>
-    /// Requests shutdown. Cancellation abandons the wait, but does not cancel
-    /// dispatcher shutdown. Repeated calls observe the same single-flight stop
-    /// operation. A reentrant call from lifecycle finalization returns
-    /// immediately so a subscriber cannot synchronously wait on itself.
+    /// Requests shutdown. Cancellation abandons the wait but not the shutdown, and
+    /// repeated calls observe the same single-flight operation.
     /// </summary>
     public Task StopAsync(CancellationToken cancellationToken = default) {
         cancellationToken.ThrowIfCancellationRequested();
@@ -259,58 +238,6 @@ public sealed class UiRuntime : IDisposable, IAsyncDisposable {
         }
     }
 
-    private bool EnqueueLifecycleNotificationLocked(
-        UiLifecycleState state,
-        bool canPump) {
-        _lifecycleNotifications.Enqueue(state);
-        if (!canPump || _lifecycleNotificationPumpActive) {
-            return false;
-        }
-
-        _lifecycleNotificationPumpActive = true;
-        return true;
-    }
-
-    private void PumpLifecycleNotifications() {
-        try {
-            while (true) {
-                UiLifecycleState state;
-                Action<UiLifecycleState>? handlers;
-                lock (_gate) {
-                    if (_lifecycleNotifications.Count == 0) {
-                        _lifecycleNotificationPumpActive = false;
-                        return;
-                    }
-
-                    state = _lifecycleNotifications.Dequeue();
-                    handlers = _lifecycleChanged;
-                }
-
-                Exception? failure = null;
-                if (handlers is not null) {
-                    foreach (var handler in handlers.GetInvocationList()) {
-                        try {
-                            ((Action<UiLifecycleState>)handler)(state);
-                        } catch (Exception exception) {
-                            failure = CombineFailures(failure, exception);
-                        }
-                    }
-                }
-
-                if (failure is not null) {
-                    ExceptionDispatchInfo.Capture(failure).Throw();
-                }
-            }
-        } catch {
-            lock (_gate) {
-                _lifecycleNotifications.Clear();
-                _lifecycleNotificationPumpActive = false;
-            }
-
-            throw;
-        }
-    }
-
     private static Exception? CombineFailures(
         Exception? first,
         Exception? second) {
@@ -328,10 +255,8 @@ public sealed class UiRuntime : IDisposable, IAsyncDisposable {
     }
 
     /// <summary>
-    /// Requests shutdown without throwing shutdown failures. On a non-owner
-    /// thread this returns after requesting shutdown; the owner thread completes
-    /// finalization. Use <see cref="DisposeAsync"/> when completion must be
-    /// awaited.
+    /// Requests shutdown without throwing shutdown failures. Use
+    /// <see cref="DisposeAsync"/> when completion must be awaited.
     /// </summary>
     public void Dispose() {
         if (!MarkDisposeRequested()) {

@@ -32,6 +32,14 @@ internal sealed class ScrollController {
 
     public float MaxOffsetY { get; private set; }
 
+    public float ViewportWidth { get; private set; }
+
+    public float ViewportHeight { get; private set; }
+
+    public float ContentWidth { get; private set; }
+
+    public float ContentHeight { get; private set; }
+
     public float MaxOverscroll { get; set; } = 24;
 
     public ScrollAxis Axis => _axis;
@@ -59,6 +67,21 @@ internal sealed class ScrollController {
             OffsetY = Math.Clamp(OffsetY + deltaY, 0, MaxOffsetY);
         }
 
+        return OffsetX != previousX || OffsetY != previousY;
+    }
+
+    public bool ScrollTo(float offsetX, float offsetY) {
+        var previousX = OffsetX;
+        var previousY = OffsetY;
+        OffsetX = IsHorizontalEnabled
+            ? Math.Clamp(offsetX, 0, MaxOffsetX)
+            : 0;
+        OffsetY = IsVerticalEnabled
+            ? Math.Clamp(offsetY, 0, MaxOffsetY)
+            : 0;
+        _velocityX = 0;
+        _velocityY = 0;
+        _settling = false;
         return OffsetX != previousX || OffsetY != previousY;
     }
 
@@ -148,6 +171,10 @@ internal sealed class ScrollController {
         float viewportHeight,
         float contentWidth,
         float contentHeight) {
+        ViewportWidth = Math.Max(0, viewportWidth);
+        ViewportHeight = Math.Max(0, viewportHeight);
+        ContentWidth = Math.Max(0, contentWidth);
+        ContentHeight = Math.Max(0, contentHeight);
         MaxOffsetX = Math.Max(0, contentWidth - viewportWidth);
         MaxOffsetY = Math.Max(0, contentHeight - viewportHeight);
         ResetDisabledAxes();

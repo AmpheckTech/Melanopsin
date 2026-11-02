@@ -64,6 +64,10 @@ public sealed class ResolvedStyle {
 
     public float Opacity { get; internal set; } = 1;
 
+    public float FilterBlurRadius { get; internal set; }
+
+    public float BackdropBlurRadius { get; internal set; }
+
     public float TransitionDuration { get; internal set; } = 0.16f;
 
     public Easing TransitionEasing { get; internal set; } = Easing.EaseOut;
@@ -73,6 +77,16 @@ public sealed class ResolvedStyle {
     /// the shape should be inherited from the nearest styled ancestor.
     /// </summary>
     public CursorKind? Cursor { get; internal set; }
+
+    public Color? ScrollbarThumbColor { get; internal set; }
+
+    public Color? ScrollbarTrackColor { get; internal set; }
+
+    public float ScrollbarThickness { get; internal set; }
+
+    public float ScrollbarMinLength { get; internal set; }
+
+    public float ScrollbarInset { get; internal set; }
 
     /// <summary>
     /// Whether resolving this style depends on the current viewport size.

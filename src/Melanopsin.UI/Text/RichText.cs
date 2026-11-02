@@ -6,6 +6,7 @@ using Melanopsin.UI.Rendering;
 namespace Melanopsin.UI;
 
 [MarkupElement]
+[MarkupAttribute("spans")]
 public sealed class RichText :
     Control,
     IRenderCommandProvider,
@@ -22,10 +23,20 @@ public sealed class RichText :
     public void AddSpan(RichTextSpan span) {
         ArgumentNullException.ThrowIfNull(span);
         _spans.Add(span);
-        Accessibility.Name = _spans.Aggregate(
-            new StringBuilder(),
-            static (builder, current) => builder.Append(current.Text))
-            .ToString();
+        UpdateAccessibilityName();
+        InvalidateLayout();
+    }
+
+    /// <summary>
+    /// Replaces every span. Markup binds this through the <c>spans</c> attribute,
+    /// so a component can describe rich text as data instead of building it
+    /// imperatively.
+    /// </summary>
+    public void SetSpans(IReadOnlyList<RichTextSpan> spans) {
+        ArgumentNullException.ThrowIfNull(spans);
+        _spans.Clear();
+        _spans.AddRange(spans);
+        UpdateAccessibilityName();
         InvalidateLayout();
     }
 
@@ -35,7 +46,7 @@ public sealed class RichText :
         }
 
         _spans.Clear();
-        Accessibility.Name = null;
+        UpdateAccessibilityName();
         InvalidateLayout();
     }
 
@@ -79,8 +90,11 @@ public sealed class RichText :
             context.Foreground);
         var top = context.Bounds.Y +
             Math.Max(0, (context.Bounds.Height - layout.Height) / 2);
+        // Runs carry their offset inside the line, so the command origin stays
+        // at the line start; adding the running x on top would double count it.
+        var lineOrigin = context.Bounds.X + context.Padding;
         foreach (var line in layout.Lines) {
-            var x = context.Bounds.X + context.Padding;
+            var x = lineOrigin;
             foreach (var run in line.Run) {
                 var runWidth = Math.Max(0, run.Run.Width);
                 commands.Add(new DrawGlyphRunCommand(
@@ -88,7 +102,7 @@ public sealed class RichText :
                     run.Run,
                     top + line.Ascent,
                     run.Color,
-                    x));
+                    lineOrigin));
                 x += runWidth;
             }
 
@@ -102,6 +116,7 @@ public sealed class RichText :
         float defaultFontSize,
         FontFace? defaultFont,
         Color defaultColor) {
+        var available = Math.Max(1, maxWidth);
         var lines = new List<RichLine>();
         var runs = new List<ColoredRun>();
         var width = 0f;
@@ -109,27 +124,45 @@ public sealed class RichText :
         var descent = 0f;
 
         foreach (var span in Spans) {
+            var text = span.Text;
+            if (text.Length == 0) {
+                continue;
+            }
+
             var fontSize = span.FontSize ?? defaultFontSize;
             var font = span.Font ?? defaultFont;
-            var shaped = textLayout.Layout(
-                span.Text,
-                new TextLayoutOptions(fontSize, maxWidth, font: font));
-            for (var lineIndex = 0; lineIndex < shaped.Lines.Count; lineIndex++) {
-                var line = shaped.Lines[lineIndex];
-                if (width > 0 && width + line.Width > maxWidth) {
+            var color = span.Color ?? defaultColor;
+            var offset = 0;
+            while (offset < text.Length) {
+                // Reshape against the space left on the current line so a span
+                // continues an earlier one instead of always starting a new line.
+                var shaped = textLayout.Layout(
+                    text[offset..],
+                    new TextLayoutOptions(
+                        fontSize,
+                        width > 0 ? Math.Max(1, available - width) : available,
+                        font: font));
+                var line = shaped.Lines[0];
+                if (width > 0 && width + line.Width > available) {
                     FlushLine();
+                    continue;
                 }
 
                 foreach (var run in line.Runs) {
-                    runs.Add(new ColoredRun(
-                        run.Offset(width),
-                        span.Color ?? defaultColor));
+                    runs.Add(new ColoredRun(run.Offset(width), color));
                 }
 
                 width += line.Width;
                 ascent = Math.Max(ascent, line.Ascent);
                 descent = Math.Max(descent, line.Descent);
-                if (lineIndex < shaped.Lines.Count - 1) {
+                var consumed = LineLength(line);
+                if (consumed <= 0) {
+                    // An empty line can only come from a hard break: skip it.
+                    consumed = 1;
+                }
+
+                offset += consumed;
+                if (offset < text.Length) {
                     FlushLine();
                 }
             }
@@ -148,7 +181,7 @@ public sealed class RichText :
             lines.Max(static line => line.Descent));
 
         void FlushLine() {
-            if (runs.Count == 0 && lines.Count == 0) {
+            if (runs.Count == 0) {
                 return;
             }
 
@@ -163,6 +196,32 @@ public sealed class RichText :
             ascent = 0;
             descent = 0;
         }
+    }
+
+    /// <summary>Logical length of the first line a shaped layout produced.</summary>
+    private static int LineLength(TextLine line) {
+        var end = 0;
+        foreach (var run in line.Runs) {
+            end = Math.Max(end, run.Start + run.Length);
+        }
+
+        return end;
+    }
+
+    protected override void OnSetAttribute(string name, object? value) {
+        base.OnSetAttribute(name, value);
+        if (name == "spans" && value is IReadOnlyList<RichTextSpan> spans) {
+            SetSpans(spans);
+        }
+    }
+
+    private void UpdateAccessibilityName() {
+        Accessibility.Name = _spans.Count == 0
+            ? null
+            : _spans.Aggregate(
+                new StringBuilder(),
+                static (builder, span) => builder.Append(span.Text))
+                .ToString();
     }
 
     private Color ForegroundColor => new(28, 37, 34);

@@ -6,10 +6,9 @@ public interface IPlatformWindowHost : IFramePresenter, IDisposable {
     float DisplayScale { get; }
 
     /// <summary>
-    /// Returns whether a frame can currently be submitted for the window.
-    /// Wayland hosts use this to expose compositor frame-callback backpressure:
-    /// callers should leave the window dirty and retry after the next platform
-    /// event when this returns <see langword="false"/>.
+    /// Returns whether a frame can currently be submitted. Callers should leave
+    /// the window dirty and retry after the next platform event when this is
+    /// <see langword="false"/>.
     /// </summary>
     bool IsPresentationReady(WindowDescriptor windowDescriptor) => true;
 

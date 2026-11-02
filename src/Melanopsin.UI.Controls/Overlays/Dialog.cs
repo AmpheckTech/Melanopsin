@@ -12,7 +12,7 @@ public sealed class Dialog : Overlay {
     public Dialog()
         : base("Dialog") {
         Accessibility.Role = AccessibilityRole.Region;
-        InlineStyle.Width = Length.Space(110);
+        InlineStyle.Width = Length.Su(110);
         _title = new TextBlock();
         _title.SetAttributeValue("class", "dialog-title");
         _message = new TextBlock();

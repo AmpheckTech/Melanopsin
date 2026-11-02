@@ -1,31 +1,18 @@
-using NWayland;
-using NWayland.Protocols.FractionalScaleV1;
-using NWayland.Protocols.Viewporter;
-using NWayland.Protocols.Wayland;
 using Melanopsin.Graphics.Rendering;
+using NWayland;
+using NWayland.Protocols.Wayland;
 
 namespace Melanopsin.UI.Platform.Wayland;
 
-internal sealed class WaylandWindow : IDisposable {
+internal sealed partial class WaylandWindow : IDisposable {
     private readonly WlCompositor _compositor;
     private readonly WlSurface _surface;
     private readonly IWlTargetQueue _queue;
-    private readonly WaylandFrameCallback _frameCallback = new();
-    private readonly WaylandShmBufferPool _bufferPool;
     private readonly SurfaceListener _surfaceListener;
     private readonly Action<WaylandWindow, bool, bool, bool> _onConfigured;
     private readonly Action<WaylandWindow> _onCloseRequested;
     private readonly Action _onBufferReleased;
-    private WpFractionalScaleV1? _fractionalScale;
-    private WpViewport? _viewport;
-    private PixelSize? _opaqueRegionSize;
-    private int _configuredBufferScale;
-    private int _configuredSourceWidth;
-    private int _configuredSourceHeight;
-    private int _configuredDestinationWidth;
-    private int _configuredDestinationHeight;
     private bool _hasSurfaceContents;
-    private bool _disposed;
 
     public WaylandWindow(
         WindowId id,
@@ -205,211 +192,7 @@ internal sealed class WaylandWindow : IDisposable {
         _hasSurfaceContents = true;
     }
 
-    public bool TryAcquireBuffer(
-        int width,
-        int height,
-        int stride,
-        out WaylandShmBufferPool.WaylandShmBuffer? buffer) {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-        return _bufferPool.TryAcquire(width, height, stride, out buffer);
-    }
-
-    public bool ArmFrameCallback(Action continuation) {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-        return _frameCallback.TryArm(_surface, _queue, continuation);
-    }
-
-    public void CancelFrameCallback() {
-        if (!_disposed) {
-            _frameCallback.Cancel();
-        }
-    }
-
-    public void ConfigureBuffer(int width, int height) {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-        width = Math.Max(1, width);
-        height = Math.Max(1, height);
-        if (_viewport is not null) {
-            if (_configuredBufferScale != 1) {
-                _surface.SetBufferScale(1);
-                _configuredBufferScale = 1;
-            }
-
-            if (_configuredSourceWidth != width ||
-                _configuredSourceHeight != height) {
-                _viewport.SetSource(
-                    new WlFixed(0),
-                    new WlFixed(0),
-                    new WlFixed(width),
-                    new WlFixed(height));
-                _configuredSourceWidth = width;
-                _configuredSourceHeight = height;
-            }
-
-            ConfigureViewportDestination();
-            ConfigureOpaqueRegion();
-        } else {
-            var bufferScale = Math.Max(
-                1,
-                (int)MathF.Round(DisplayScale));
-            if (_configuredBufferScale != bufferScale) {
-                _surface.SetBufferScale(bufferScale);
-                _configuredBufferScale = bufferScale;
-            }
-
-            ConfigureOpaqueRegion();
-        }
-    }
-
-    private void ConfigureViewportDestination() {
-        if (_viewport is null) {
-            return;
-        }
-
-        var destinationWidth = Math.Max(1, LogicalSize.Width);
-        var destinationHeight = Math.Max(1, LogicalSize.Height);
-        if (_configuredDestinationWidth != destinationWidth ||
-            _configuredDestinationHeight != destinationHeight) {
-            _viewport.SetDestination(
-                destinationWidth,
-                destinationHeight);
-            _configuredDestinationWidth = destinationWidth;
-            _configuredDestinationHeight = destinationHeight;
-            ConfigureOpaqueRegion();
-        }
-    }
-
-    private void ConfigureOpaqueRegion() {
-        var width = Math.Max(1, LogicalSize.Width);
-        var height = Math.Max(1, LogicalSize.Height);
-        var size = new PixelSize(width, height);
-        if (_opaqueRegionSize == size) {
-            return;
-        }
-
-        // A top-level window is opaque unless the application explicitly
-        // opts into a translucent surface. Advertising the whole content area
-        // lets the compositor skip wallpaper blending and also prevents
-        // transient alpha values in GPU swap-chain buffers from leaking
-        // through while the surface is being resized.
-        var region = _compositor.CreateRegion(null, null);
-        try {
-            region.Add(0, 0, width, height);
-            _surface.SetOpaqueRegion(region);
-        } finally {
-            if (!region.IsDisposed) {
-                region.Destroy();
-                region.Dispose();
-            }
-        }
-
-        _opaqueRegionSize = size;
-    }
-
-    public void Dispose() {
-        if (_disposed) {
-            return;
-        }
-
-        _disposed = true;
-        _frameCallback.Dispose();
-        _bufferPool.Dispose();
-        if (GpuSurface is { } gpuSurface) {
-            gpuSurface.ReleasePresentSurface(_surface.Handle);
-            GpuSurface = null;
-        }
-
-        if (_viewport is not null) {
-            if (!_viewport.IsDisposed) {
-                _viewport.Destroy();
-                _viewport.Dispose();
-            }
-
-            _viewport = null;
-        }
-
-        if (_fractionalScale is not null) {
-            if (!_fractionalScale.IsDisposed) {
-                _fractionalScale.Destroy();
-                _fractionalScale.Dispose();
-            }
-
-            _fractionalScale = null;
-        }
-
-        Decoration?.Dispose();
-        Decoration = null;
-        if (!_surface.IsDisposed) {
-            _surface.Destroy();
-            _surface.Dispose();
-        }
-    }
-
-    private void OnPreferredBufferScale(int factor) {
-        if (_disposed || HasFractionalScaling || factor <= 0) {
-            return;
-        }
-
-        SetDisplayScale(factor);
-    }
-
-    private void OnPreferredFractionalScale(uint scale) {
-        if (_disposed || scale == 0) {
-            return;
-        }
-
-        SetDisplayScale(scale / 120f);
-    }
-
-    private void SetDisplayScale(float scale) {
-        scale = NormalizeScale(scale);
-        if (Math.Abs(DisplayScale - scale) < 0.0001f) {
-            return;
-        }
-
-        _ = UpdateConfiguration(
-            LogicalSize,
-            scale,
-            out var scaleChanged,
-            out var sizeChanged);
-        if (scaleChanged || sizeChanged) {
-            _onConfigured(
-                this,
-                scaleChanged,
-                sizeChanged,
-                scaleChanged || sizeChanged);
-        }
-    }
-
     private static float NormalizeScale(float scale) {
         return float.IsFinite(scale) && scale > 0 ? scale : 1f;
-    }
-
-    private sealed class SurfaceListener : WlSurface.Listener {
-        private readonly WaylandWindow _window;
-
-        public SurfaceListener(WaylandWindow window) {
-            _window = window;
-        }
-
-        protected override void PreferredBufferScale(
-            WlSurface eventSender,
-            int factor) {
-            _window.OnPreferredBufferScale(factor);
-        }
-    }
-
-    private sealed class FractionalScaleListener : WpFractionalScaleV1.Listener {
-        private readonly WaylandWindow _window;
-
-        public FractionalScaleListener(WaylandWindow window) {
-            _window = window;
-        }
-
-        protected override void PreferredScale(
-            WpFractionalScaleV1 eventSender,
-            uint scale) {
-            _window.OnPreferredFractionalScale(scale);
-        }
     }
 }

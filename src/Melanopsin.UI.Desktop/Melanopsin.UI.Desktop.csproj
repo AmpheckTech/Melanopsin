@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsAotCompatible>true</IsAotCompatible>
+    <IsTrimmable>true</IsTrimmable>
+    <RootNamespace>Melanopsin.UI.Desktop</RootNamespace>
+    <Description>Default desktop bootstrap for Melanopsin applications.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Melanopsin.UI/Melanopsin.UI.csproj" />
+    <ProjectReference Include="../Melanopsin.UI.DevTools/Melanopsin.UI.DevTools.csproj" />
+    <ProjectReference Include="../Melanopsin.Graphics.Backend/Melanopsin.Graphics.Backend.Skia/Melanopsin.Graphics.Backend.Skia.csproj" />
+    <ProjectReference Include="../Melanopsin.UI.Platform/Melanopsin.UI.Platform.Win32/Melanopsin.UI.Platform.Win32.csproj" />
+    <ProjectReference Include="../Melanopsin.UI.Platform/Melanopsin.UI.Platform.Wayland/Melanopsin.UI.Platform.Wayland.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Melanopsin.Graphics" />
+    <Using Include="Melanopsin.Graphics.Rendering" />
+    <Using Include="Melanopsin.Graphics.Text" />
+    <Using Include="Melanopsin.Graphics.Text.Fonts" />
+    <Using Include="Melanopsin.UI.Hosting" />
+    <Using Include="Melanopsin.UI.Layout" />
+    <Using Include="Melanopsin.UI.Rendering" />
+    <Using Include="Melanopsin.UI.Styling" />
+  </ItemGroup>
+</Project>

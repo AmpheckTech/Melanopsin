@@ -4,15 +4,16 @@ namespace Melanopsin.Graphics.Backend.Skia;
 
 internal sealed class SkiaImageResourceCache : IDisposable {
     private const int MaxEntries = 64;
-    private const long MaxEncodedBytes = 64L * 1024 * 1024;
+    private const int MaxDecodedDimension = 16384;
+    private const long MaxDecodedPixels = 32L * 1024 * 1024;
+    private const long MaxDecodedBytes = 128L * 1024 * 1024;
     private readonly Dictionary<ImageResource, CacheEntry> _entries =
         new(ReferenceEqualityComparer.Instance);
-    private long _encodedBytes;
+    private long _decodedBytes;
     private long _tick;
     private bool _disposed;
 
     public SKImage Get(ImageResource resource) {
-        ArgumentNullException.ThrowIfNull(resource);
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         if (_entries.TryGetValue(resource, out var cached)) {
@@ -20,12 +21,17 @@ internal sealed class SkiaImageResourceCache : IDisposable {
             return cached.Image;
         }
 
-        var image = SKImage.FromEncodedData(resource.Data.Span) ??
+        using var encoded = SKData.CreateCopy(resource.Data.Span);
+        using var codec = SKCodec.Create(encoded) ??
             throw new InvalidDataException(
                 "The image resource could not be decoded.");
-        var entry = new CacheEntry(image, resource.Data.Length, ++_tick);
+        var decodedBytes = GetDecodedByteCount(codec.Info);
+        var image = SKImage.FromEncodedData(encoded) ??
+            throw new InvalidDataException(
+                "The image resource could not be decoded.");
+        var entry = new CacheEntry(image, decodedBytes, ++_tick);
         _entries.Add(resource, entry);
-        _encodedBytes += entry.EncodedBytes;
+        _decodedBytes += entry.DecodedBytes;
         Trim();
         return image;
     }
@@ -43,7 +49,7 @@ internal sealed class SkiaImageResourceCache : IDisposable {
             }
         } finally {
             _entries.Clear();
-            _encodedBytes = 0;
+            _decodedBytes = 0;
             _tick = 0;
         }
 
@@ -53,7 +59,7 @@ internal sealed class SkiaImageResourceCache : IDisposable {
     private void Trim() {
         Exception? failure = null;
         while (_entries.Count > MaxEntries ||
-               _encodedBytes > MaxEncodedBytes) {
+               _decodedBytes > MaxDecodedBytes) {
             ImageResource? victim = null;
             var oldest = long.MaxValue;
             foreach (var pair in _entries) {
@@ -71,23 +77,36 @@ internal sealed class SkiaImageResourceCache : IDisposable {
 
             var entry = _entries[victim];
             _entries.Remove(victim);
-            _encodedBytes -= entry.EncodedBytes;
+            _decodedBytes -= entry.DecodedBytes;
             SkiaCleanup.Capture(ref failure, entry.Dispose);
         }
 
         SkiaCleanup.ThrowIfFailed(failure);
     }
 
+    private static long GetDecodedByteCount(SKImageInfo info) {
+        if (info.Width <= 0 ||
+            info.Height <= 0 ||
+            info.Width > MaxDecodedDimension ||
+            info.Height > MaxDecodedDimension ||
+            (long)info.Width * info.Height > MaxDecodedPixels) {
+            throw new InvalidDataException(
+                "The decoded image dimensions exceed the supported limit.");
+        }
+
+        return (long)info.Width * info.Height * 4;
+    }
+
     private sealed class CacheEntry : IDisposable {
-        public CacheEntry(SKImage image, long encodedBytes, long lastUsed) {
+        public CacheEntry(SKImage image, long decodedBytes, long lastUsed) {
             Image = image;
-            EncodedBytes = encodedBytes;
+            DecodedBytes = decodedBytes;
             LastUsed = lastUsed;
         }
 
         public SKImage Image { get; }
 
-        public long EncodedBytes { get; }
+        public long DecodedBytes { get; }
 
         public long LastUsed { get; set; }
 

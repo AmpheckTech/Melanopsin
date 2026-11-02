@@ -18,7 +18,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <AdditionalFiles Include="Views/**/*.xml" />
+    <AdditionalFiles Include="Views/**/*.mxml" />
+    <AdditionalFiles Include="Styles/**/*.css" />
   </ItemGroup>
 
   <ItemGroup>

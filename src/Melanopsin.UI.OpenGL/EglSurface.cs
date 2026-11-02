@@ -1,4 +1,3 @@
-using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 
 namespace Melanopsin.UI.OpenGL;
@@ -56,8 +55,6 @@ internal sealed class EglSurface : IOpenGLSurface {
         Color clearColor,
         Action<int, int>? content) {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
         EnsureSize(width, height);
         MakeCurrent();
         return OpenGLFrameRenderer.Render(
@@ -76,27 +73,16 @@ internal sealed class EglSurface : IOpenGLSurface {
         }
 
         _disposed = true;
-        Exception? failure = null;
-        CaptureCleanupFailure(
-            ref failure,
-            () => _ = EglNative.eglMakeCurrent(
-                _display,
-                IntPtr.Zero,
-                IntPtr.Zero,
-                IntPtr.Zero));
-        CaptureCleanupFailure(
-            ref failure,
-            () => _ = EglNative.eglDestroyContext(_display, _context));
-        CaptureCleanupFailure(
-            ref failure,
-            () => _ = EglNative.eglDestroySurface(_display, _surface));
-        CaptureCleanupFailure(
-            ref failure,
-            () => _ = EglNative.eglTerminate(_display));
+        _ = EglNative.eglMakeCurrent(
+            _display,
+            IntPtr.Zero,
+            IntPtr.Zero,
+            IntPtr.Zero);
+        _ = EglNative.eglDestroyContext(_display, _context);
+        _ = EglNative.eglDestroySurface(_display, _surface);
+        _ = EglNative.eglTerminate(_display);
         if (_waylandDisplay != IntPtr.Zero) {
-            CaptureCleanupFailure(
-                ref failure,
-                () => EglNative.wl_display_disconnect(_waylandDisplay));
+            EglNative.wl_display_disconnect(_waylandDisplay);
         }
 
         _display = IntPtr.Zero;
@@ -104,7 +90,6 @@ internal sealed class EglSurface : IOpenGLSurface {
         _configuration = IntPtr.Zero;
         _context = IntPtr.Zero;
         _surface = IntPtr.Zero;
-        ThrowIfFailed(failure);
     }
 
     private static IntPtr CreateDisplay(out IntPtr waylandDisplay) {
@@ -298,24 +283,4 @@ internal sealed class EglSurface : IOpenGLSurface {
             $"{message} EGL error 0x{EglNative.eglGetError():X4}.");
     }
 
-    private static void CaptureCleanupFailure(
-        ref Exception? failure,
-        Action action) {
-        try {
-            action();
-        } catch (Exception exception) {
-            failure = failure is null
-                ? exception
-                : failure is AggregateException aggregate
-                    ? new AggregateException(
-                        aggregate.InnerExceptions.Append(exception))
-                    : new AggregateException(failure, exception);
-        }
-    }
-
-    private static void ThrowIfFailed(Exception? failure) {
-        if (failure is not null) {
-            ExceptionDispatchInfo.Capture(failure).Throw();
-        }
-    }
 }

@@ -25,7 +25,7 @@ public class LinearLayout :
     public StackOrientation Orientation { get; private set; } = StackOrientation.Vertical;
 
     [MarkupAttribute("spacing", MarkupValueKind.Length)]
-    public Length Spacing { get; private set; } = Length.Space(1);
+    public Length Spacing { get; private set; } = Length.Su(1);
 
     bool ILayoutViewportDependency.UsesViewportUnits =>
         Spacing.UsesViewportUnits;
@@ -34,15 +34,12 @@ public class LinearLayout :
         base.OnSetAttribute(name, value);
         switch (name) {
             case "orientation":
-                Orientation = string.Equals(
-                    value?.ToString(),
-                    "horizontal",
-                    StringComparison.OrdinalIgnoreCase)
-                    ? StackOrientation.Horizontal
+                Orientation = value is StackOrientation orientation
+                    ? orientation
                     : StackOrientation.Vertical;
                 break;
             case "spacing":
-                if (Length.TryParse(value?.ToString(), out var spacing)) {
+                if (value is Length spacing) {
                     Spacing = spacing;
                 }
 
@@ -72,7 +69,7 @@ public class LinearLayout :
                 : float.PositiveInfinity);
         var children = context.GetVisibleChildren(this);
         var horizontal = Orientation == StackOrientation.Horizontal;
-        var spacing = ResolveSpacing(context);
+        var spacing = LayoutMath.ResolveGap(Spacing, context.Metrics);
         var childrenWidth = 0f;
         var childrenHeight = 0f;
 
@@ -99,7 +96,9 @@ public class LinearLayout :
         }
 
         _ = childrenWidth;
-        var fallbackHeight = Math.Max(context.Metrics.Space(8), childrenHeight);
+        var fallbackHeight = Math.Max(
+            context.Metrics.Space(8),
+            childrenHeight + (style.Padding * 2));
         var height = context.ResolveHeight(
             style,
             constraints,
@@ -123,7 +122,7 @@ public class LinearLayout :
         try {
             styles = ArrayPool<ResolvedStyle>.Shared.Rent(count);
             var horizontal = Orientation == StackOrientation.Horizontal;
-            var spacing = ResolveSpacing(context);
+            var spacing = LayoutMath.ResolveGap(Spacing, context.Metrics);
             var totalWeight = 0f;
             var consumed = 0f;
 
@@ -167,7 +166,7 @@ public class LinearLayout :
 
                 if (horizontal) {
                     childWidth += weightShare;
-                    var y = AlignY(
+                    var y = LayoutMath.AlignY(
                         content,
                         childHeight,
                         childStyle.Anchor,
@@ -182,7 +181,7 @@ public class LinearLayout :
                     context.ArrangeChild(child, childBounds);
                 } else {
                     childHeight += weightShare;
-                    var x = AlignX(
+                    var x = LayoutMath.AlignX(
                         content,
                         childWidth,
                         childStyle.Anchor,
@@ -212,7 +211,7 @@ public class LinearLayout :
         float crossAxisExtent) {
         var children = context.GetVisibleChildren(this);
         var style = context.GetStyle(this);
-        var spacing = ResolveSpacing(context);
+        var spacing = LayoutMath.ResolveGap(Spacing, context.Metrics);
         var horizontal = Orientation == StackOrientation.Horizontal;
         var extent = 0f;
 
@@ -269,45 +268,4 @@ public class LinearLayout :
         return extent + (style.Padding * 2);
     }
 
-    private float ResolveSpacing(LayoutMeasureContext context) {
-        return Spacing.Resolve(
-            context.Metrics,
-            available: 0,
-            fallback: context.Metrics.Space(1));
-    }
-
-    private float ResolveSpacing(LayoutArrangeContext context) {
-        return Spacing.Resolve(
-            context.Metrics,
-            available: 0,
-            fallback: context.Metrics.Space(1));
-    }
-
-    private static float AlignX(
-        Rect content,
-        float width,
-        Anchor anchor,
-        float margin) {
-        return anchor switch {
-            Anchor.Top or Anchor.Center or Anchor.Bottom =>
-                content.X + ((content.Width - width) / 2),
-            Anchor.TopRight or Anchor.Right or Anchor.BottomRight =>
-                content.Right - width - margin,
-            _ => content.X + margin,
-        };
-    }
-
-    private static float AlignY(
-        Rect content,
-        float height,
-        Anchor anchor,
-        float margin) {
-        return anchor switch {
-            Anchor.Left or Anchor.Center or Anchor.Right =>
-                content.Y + ((content.Height - height) / 2),
-            Anchor.BottomLeft or Anchor.Bottom or Anchor.BottomRight =>
-                content.Bottom - height - margin,
-            _ => content.Y + margin,
-        };
-    }
 }

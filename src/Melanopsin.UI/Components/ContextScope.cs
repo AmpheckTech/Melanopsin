@@ -7,7 +7,6 @@ public sealed class ContextScope<T> : IDisposable {
     private readonly bool _hadPrevious;
     private readonly T? _previousValue;
     private int _disposed;
-    private Exception? _disposeFailure;
 
     internal ContextScope(
         IContextStore store,
@@ -27,41 +26,17 @@ public sealed class ContextScope<T> : IDisposable {
         set => _binding.SetValue(value);
     }
 
-    /// <summary>
-    /// The failure observed during the most recent disposal. Disposal records
-    /// this value instead of throwing so it cannot mask an active exception.
-    /// </summary>
-    public Exception? LastDisposeFailure => Volatile.Read(ref _disposeFailure);
-
     public void Dispose() {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) {
             return;
         }
 
-        Exception? failure = null;
         if (_hadPrevious) {
-            CaptureFailure(
-                ref failure,
-                () => _binding.SetValue(_previousValue!));
-        } else {
-            CaptureFailure(ref failure, _binding.Invalidate);
-            CaptureFailure(
-                ref failure,
-                () => _store.ContextValues?.Remove(_context));
+            _binding.SetValue(_previousValue!);
+            return;
         }
 
-        Volatile.Write(ref _disposeFailure, failure);
-    }
-
-    private static void CaptureFailure(
-        ref Exception? failure,
-        Action action) {
-        try {
-            action();
-        } catch (Exception exception) {
-            failure = failure is null
-                ? exception
-                : new AggregateException(failure, exception);
-        }
+        _binding.Invalidate();
+        _store.ContextValues?.Remove(_context);
     }
 }

@@ -1,0 +1,644 @@
+<Page
+  package="Melanopsin.UI.DevTools"
+  component="DevToolsComponent"
+  title="Melanopsin DevTools"
+  class="devtools">
+  <FlexLayout
+    direction="column"
+    align-items="stretch"
+    width="100%"
+    height="100%">
+    <FlexLayout
+      class="toolbar"
+      direction="row"
+      align-items="stretch"
+      width="100%"
+      height="9su"
+      flex-shrink="0">
+      <FlexLayout
+        class="brand"
+        direction="row"
+        align-items="center"
+        width="26su"
+        flex-grow="0"
+        flex-shrink="0">
+        <TextBlock class="brand-title" text="DevTools" wrap="false" />
+      </FlexLayout>
+
+      <ScrollViewport
+        axis="horizontal"
+        min-width="30su"
+        width="0px"
+        height="100%"
+        flex-grow="1"
+        flex-shrink="1">
+        <FlexLayout
+          class="tabs"
+          direction="row"
+          align-items="stretch"
+          height="100%"
+          column-gap="0px">
+          @for (window of Windows; track window.Id) {
+            <Button
+              class="{{ window.CssClass }}"
+              text="{{ window.Title }}"
+              min-width="24su"
+              max-width="36su"
+              height="100%" />
+          }
+        </FlexLayout>
+      </ScrollViewport>
+
+      <FlexLayout
+        class="presence"
+        direction="row"
+        align-items="center"
+        width="22su"
+        flex-grow="0"
+        flex-shrink="0"
+        justify-content="end"
+        column-gap="1su">
+        <TextBlock
+          class="{{ SnapshotStateClass }}"
+          text="{{ SnapshotStateLabel }}"
+          width="100%"
+          flex-grow="1"
+          wrap="false" />
+      </FlexLayout>
+    </FlexLayout>
+
+    <LinearLayout class="rule" orientation="horizontal" width="100%" height="1hx" />
+
+    <FlexLayout
+      direction="row"
+      align-items="stretch"
+      width="100%"
+      height="100%"
+      flex-grow="1">
+      <LinearLayout
+        class="sidebar"
+        orientation="vertical"
+        spacing="0px"
+        width="{{ SidebarWidth }}px"
+        height="100%"
+        flex-shrink="0">
+        <FlexLayout
+          class="sidebar-heading"
+          direction="row"
+          align-items="center"
+          justify-content="space-between"
+          width="100%"
+          height="7su"
+          flex-shrink="0">
+          <TextBlock class="sidebar-label" text="INSPECTOR" wrap="false" />
+        </FlexLayout>
+
+        <LinearLayout
+          class="navigation"
+          orientation="vertical"
+          spacing="0px"
+          width="100%">
+          <Button
+            class="{{ OverviewButtonClass }}"
+            text="Overview"
+            width="100%"
+            height="7su"
+            onClicked="ActivateOverviewPanel()" />
+          <Button
+            class="{{ LayoutButtonClass }}"
+            text="Layout"
+            width="100%"
+            height="7su"
+            onClicked="ActivateLayoutPanel()" />
+          <Button
+            class="{{ PaintButtonClass }}"
+            text="Paint"
+            width="100%"
+            height="7su"
+            onClicked="ActivatePaintPanel()" />
+          <Button
+            class="{{ CachesButtonClass }}"
+            text="Caches"
+            width="100%"
+            height="7su"
+            onClicked="ActivateCachesPanel()" />
+          <Button
+            class="{{ MemoryButtonClass }}"
+            text="Memory"
+            width="100%"
+            height="7su"
+            onClicked="ActivateMemoryPanel()" />
+          <Button
+            class="{{ AccessibilityButtonClass }}"
+            text="Accessibility"
+            width="100%"
+            height="7su"
+            onClicked="ActivateAccessibilityPanel()" />
+        </LinearLayout>
+
+        <LinearLayout weight="1" width="100%" height="0px" />
+        <LinearLayout class="rule" orientation="horizontal" width="100%" height="1hx" />
+
+        <LinearLayout
+          class="sidebar-target"
+          orientation="vertical"
+          spacing="1su"
+          width="100%"
+          flex-shrink="0">
+          <TextBlock class="sidebar-label" text="TARGET" wrap="false" />
+          <TextBlock id="devtools-selected" class="target-name" text="{{ SelectedTitle }}" wrap="true" />
+          <TextBlock id="devtools-selected-context" class="target-context" text="{{ SelectedContext }}" wrap="true" />
+          <Button
+            class="{{ DebugBoundsButtonClass }}"
+            text="{{ DebugBoundsLabel }}"
+            width="100%"
+            height="7su"
+            disabled="{{ DebugBoundsUnavailable }}"
+            onClicked="ToggleDebugBounds()" />
+        </LinearLayout>
+      </LinearLayout>
+
+      <Resizer
+        class="resizer"
+        width="1su"
+        flex-shrink="0"
+        height="100%"
+        a11y-label="Resize inspector navigation"
+        onDragDelta="ResizeSidebar($event)" />
+
+      <LinearLayout
+        class="inspector"
+        orientation="vertical"
+        spacing="0px"
+        width="100%"
+        height="100%"
+        flex-grow="1">
+        <FlexLayout
+          class="inspector-heading"
+          direction="row"
+          align-items="center"
+          justify-content="space-between"
+          width="100%"
+          height="12su"
+          flex-shrink="0">
+          <LinearLayout
+            class="heading-copy"
+            orientation="vertical"
+            spacing="0px"
+            flex-grow="1">
+            <TextBlock id="devtools-panel-title" class="panel-title" text="{{ PanelTitle }}" wrap="false" />
+            <TextBlock id="devtools-panel-description" class="panel-description" text="{{ PanelDescription }}" wrap="false" />
+          </LinearLayout>
+          <TextBlock
+            class="shortcut"
+            text="F12"
+            width="8su"
+            flex-grow="0"
+            flex-shrink="0"
+            wrap="false" />
+        </FlexLayout>
+
+        <LinearLayout class="rule" orientation="horizontal" width="100%" height="1hx" />
+
+        <ScrollViewport
+          axis="vertical"
+          width="100%"
+          weight="1">
+          <LinearLayout
+            class="panel"
+            orientation="vertical"
+            spacing="0px"
+            width="100%">
+            <LinearLayout
+              visible='{{ SelectedTab == "overview" }}'
+              orientation="vertical"
+              spacing="0px"
+              width="100%">
+              <GridLayout class="metrics" columns="3" rows="1" column-gap="1hx" width="100%">
+                <LinearLayout class="metric-cell" orientation="vertical" spacing="1su">
+                  <TextBlock class="caption faint" text="LAYOUT" wrap="false" />
+                  <TextBlock class="{{ LayoutTimingClass }}" text="{{ LayoutMillisecondsValue }}" wrap="false" />
+                </LinearLayout>
+                <LinearLayout class="metric-cell" orientation="vertical" spacing="1su">
+                  <TextBlock class="caption faint" text="COMPOSE" wrap="false" />
+                  <TextBlock class="{{ ComposeTimingClass }}" text="{{ ComposeMillisecondsValue }}" wrap="false" />
+                </LinearLayout>
+                <LinearLayout class="metric-cell" orientation="vertical" spacing="1su">
+                  <TextBlock class="caption faint" text="RASTER" wrap="false" />
+                  <TextBlock class="{{ RenderTimingClass }}" text="{{ RenderMillisecondsValue }}" wrap="false" />
+                </LinearLayout>
+              </GridLayout>
+
+              <LinearLayout class="budget" orientation="vertical" spacing="1su" width="100%">
+                <FlexLayout direction="row" align-items="center" justify-content="space-between" width="100%">
+                  <TextBlock class="caption faint" text="FRAME BUDGET · 60 HZ" wrap="false" />
+                  <TextBlock class="caption" text="{{ FrameBudgetText }}" wrap="false" />
+                </FlexLayout>
+                <LinearLayout class="budget-track" orientation="horizontal" spacing="0px" width="100%" height="2hx" clip="true">
+                  <LinearLayout class="{{ FrameBudgetClass }}" width="{{ FrameBudgetWidth }}" height="100%" />
+                </LinearLayout>
+              </LinearLayout>
+
+              <LinearLayout class="section" orientation="vertical" spacing="0px" width="100%">
+                <FlexLayout class="section-heading" direction="row" align-items="center" justify-content="space-between" width="100%" height="6su">
+                  <TextBlock class="caption" text="FRAME" wrap="false" />
+                  <TextBlock class="caption faint end" text="latest completed render" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Frame ID" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ FrameValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Layout version" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ LayoutVersionValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Invalidation" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ InvalidationScopeValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Box overlays" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ DebugBoundsValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Path nodes" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ InvalidationPathNodeCountValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+              </LinearLayout>
+
+              <LinearLayout class="section" orientation="vertical" spacing="0px" width="100%">
+                <FlexLayout class="section-heading" direction="row" align-items="center" justify-content="space-between" width="100%" height="6su">
+                  <TextBlock class="caption" text="OUTPUT" wrap="false" />
+                  <TextBlock class="caption faint end" text="display list and damage" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Commands" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ CommandCountValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Damage rects" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ DamageRectCountValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Damage area" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ DamageAreaValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+              </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+              visible='{{ SelectedTab == "layout" }}'
+              orientation="vertical"
+              spacing="0px"
+              width="100%">
+              <LinearLayout class="notice" orientation="vertical" spacing="0px" width="100%">
+                <TextBlock class="notice-text" text="Layout work is attributed to the invalidated paths below. Persistent boundaries avoid measuring unchanged subtrees." />
+              </LinearLayout>
+              <LinearLayout class="section" orientation="vertical" spacing="0px" width="100%">
+                <FlexLayout class="section-heading" direction="row" align-items="center" justify-content="space-between" width="100%" height="6su">
+                  <TextBlock class="caption" text="INVALIDATION" wrap="false" />
+                  <TextBlock class="caption faint end" text="{{ RelayoutCacheText }}" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Scope" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ InvalidationScopeValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Path nodes" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ InvalidationPathNodeCountValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+              </LinearLayout>
+              <LinearLayout class="section" orientation="vertical" spacing="0px" width="100%">
+                <FlexLayout class="section-heading" direction="row" align-items="center" justify-content="space-between" width="100%" height="6su">
+                  <TextBlock class="caption" text="MEASURE BOUNDARIES" wrap="false" />
+                  <TextBlock class="caption faint end" text="persistent cache" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Boundary hits" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ RelayoutBoundaryHitsValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Boundary misses" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ RelayoutBoundaryMissesValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Measure calls" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ MeasureExecutionValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Cache hits" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ PersistentMeasureHitsValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+              </LinearLayout>
+              <LinearLayout class="section" orientation="vertical" spacing="0px" width="100%">
+                <FlexLayout class="section-heading" direction="row" align-items="center" justify-content="space-between" width="100%" height="6su">
+                  <TextBlock class="caption" text="ARRANGEMENT" wrap="false" />
+                  <TextBlock class="caption faint end" text="subtree reuse" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Reused nodes" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ ArrangeReuseHitsValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Rebuilt nodes" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ ArrangeReuseMissesValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+              </LinearLayout>
+              <LinearLayout class="section" orientation="vertical" spacing="0px" width="100%">
+                <FlexLayout class="section-heading" direction="row" align-items="center" justify-content="space-between" width="100%" height="6su">
+                  <TextBlock class="caption" text="HIT TEST CACHE" wrap="false" />
+                  <TextBlock class="caption faint end" text="{{ HitRegionCacheHitRateValue }}" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Hits" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ HitRegionCacheHitsValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Misses" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ HitRegionCacheMissesValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+              </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+              visible='{{ SelectedTab == "paint" }}'
+              orientation="vertical"
+              spacing="0px"
+              width="100%">
+              <GridLayout class="metrics" columns="3" rows="1" column-gap="1hx" width="100%">
+                <LinearLayout class="metric-cell" orientation="vertical" spacing="1su">
+                  <TextBlock class="caption faint" text="LAYOUT" wrap="false" />
+                      <TextBlock class="{{ LayoutTimingClass }}" text="{{ LayoutMillisecondsValue }}" wrap="false" />
+                </LinearLayout>
+                <LinearLayout class="metric-cell" orientation="vertical" spacing="1su">
+                  <TextBlock class="caption faint" text="RASTER" wrap="false" />
+                      <TextBlock class="{{ RenderTimingClass }}" text="{{ RenderMillisecondsValue }}" wrap="false" />
+                </LinearLayout>
+                <LinearLayout class="metric-cell" orientation="vertical" spacing="1su">
+                  <TextBlock class="caption faint" text="COMMANDS" wrap="false" />
+                  <TextBlock class="metric" text="{{ CommandCountValue }}" wrap="false" />
+                </LinearLayout>
+              </GridLayout>
+              <LinearLayout class="section" orientation="vertical" spacing="0px" width="100%">
+                <FlexLayout class="section-heading" direction="row" align-items="center" justify-content="space-between" width="100%" height="6su">
+                  <TextBlock class="caption" text="DAMAGE" wrap="false" />
+                  <TextBlock class="caption faint end" text="changed surface area" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Rectangles" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ DamageRectCountValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Total area" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ DamageAreaValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+              </LinearLayout>
+              <LinearLayout class="section" orientation="vertical" spacing="0px" width="100%">
+                <FlexLayout class="section-heading" direction="row" align-items="center" justify-content="space-between" width="100%" height="6su">
+                  <TextBlock class="caption" text="PAINT BOUNDARIES" wrap="false" />
+                  <TextBlock class="caption faint end" text="{{ PaintCacheText }}" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Reused" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ ReusedPaintBoundariesValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Repainted" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ RepaintedPaintBoundariesValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+              </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+              visible='{{ SelectedTab == "caches" }}'
+              orientation="vertical"
+              spacing="0px"
+              width="100%">
+              <LinearLayout class="notice" orientation="vertical" spacing="0px" width="100%">
+                <TextBlock class="notice-text" text="Cache counters are collected per rendered frame. Raster cache size is the retained GPU/CPU memory estimate reported by the active backend." />
+              </LinearLayout>
+              <LinearLayout class="section" orientation="vertical" spacing="0px" width="100%">
+                <FlexLayout class="section-heading" direction="row" align-items="center" justify-content="space-between" width="100%" height="6su">
+                  <TextBlock class="caption" text="RASTER CACHE" wrap="false" />
+                  <TextBlock class="caption faint end" text="{{ RasterCacheHitRateValue }}" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Hits" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ RasterCacheHitsValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Misses" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ RasterCacheMissesValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Retained size" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ RasterCacheSizeValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+              </LinearLayout>
+              <LinearLayout class="section" orientation="vertical" spacing="0px" width="100%">
+                <FlexLayout class="section-heading" direction="row" align-items="center" justify-content="space-between" width="100%" height="6su">
+                  <TextBlock class="caption" text="PAINT BOUNDARIES" wrap="false" />
+                  <TextBlock class="caption faint end" text="{{ PaintCacheText }}" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Boundary reuse" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ ReusedPaintBoundariesValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Boundary repaint" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ RepaintedPaintBoundariesValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+              </LinearLayout>
+              <LinearLayout class="section" orientation="vertical" spacing="0px" width="100%">
+                <FlexLayout class="section-heading" direction="row" align-items="center" justify-content="space-between" width="100%" height="6su">
+                  <TextBlock class="caption" text="LAYOUT CACHE" wrap="false" />
+                  <TextBlock class="caption faint end" text="{{ RelayoutCacheText }}" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Arrangement reuse" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ ArrangeReuseHitsValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Arrangement rebuilds" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ ArrangeReuseMissesValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Persistent hits" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ PersistentMeasureHitsValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Measure executions" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ MeasureExecutionValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+              </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+              visible='{{ SelectedTab == "memory" }}'
+              orientation="vertical"
+              spacing="0px"
+              width="100%">
+              <LinearLayout class="notice" orientation="vertical" spacing="0px" width="100%">
+                <TextBlock class="notice-text" text="Heap and process counters are sampled from the running host without forcing a collection. Retained counts come from the selected window's most recent layout pass." />
+              </LinearLayout>
+
+              <LinearLayout class="section" orientation="vertical" spacing="0px" width="100%">
+                <FlexLayout class="section-heading" direction="row" align-items="center" justify-content="space-between" width="100%" height="6su">
+                  <TextBlock class="caption" text="MANAGED HEAP" wrap="false" />
+                  <TextBlock class="caption faint end" text="{{ MemorySampleValue }}" wrap="false" />
+                </FlexLayout>
+                <GridLayout class="metrics" columns="3" rows="1" column-gap="1hx" width="100%">
+                  <LinearLayout class="metric-cell" orientation="vertical" spacing="1su">
+                    <TextBlock class="caption faint" text="HEAP" wrap="false" />
+                    <TextBlock class="metric" text="{{ MemoryHeapValue }}" wrap="false" />
+                  </LinearLayout>
+                  <LinearLayout class="metric-cell" orientation="vertical" spacing="1su">
+                    <TextBlock class="caption faint" text="PEAK" wrap="false" />
+                    <TextBlock class="metric" text="{{ MemoryPeakValue }}" wrap="false" />
+                  </LinearLayout>
+                  <LinearLayout class="metric-cell" orientation="vertical" spacing="1su">
+                    <TextBlock class="caption faint" text="ALLOCATION RATE" wrap="false" />
+                    <TextBlock class="metric" text="{{ MemoryAllocationRateValue }}" wrap="false" />
+                  </LinearLayout>
+                </GridLayout>
+
+                <Canvas id="devtools-memory-chart" class="chart" width="100%" height="16su" clip="true" />
+
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Committed" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ MemoryCommittedValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Fragmented" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ MemoryFragmentedValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Allocated total" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ MemoryAllocatedValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Heap budget" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ MemoryAvailableValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+              </LinearLayout>
+
+              <LinearLayout class="section" orientation="vertical" spacing="0px" width="100%">
+                <FlexLayout class="section-heading" direction="row" align-items="center" justify-content="space-between" width="100%" height="6su">
+                  <TextBlock class="caption" text="GENERATIONS" wrap="false" />
+                  <TextBlock class="caption faint end" text="{{ MemoryCollectionsValue }}" wrap="false" />
+                </FlexLayout>
+                <GridLayout class="metrics" columns="3" rows="1" column-gap="1hx" width="100%">
+                  <LinearLayout class="metric-cell" orientation="vertical" spacing="1su">
+                    <TextBlock class="caption faint" text="GEN 0" wrap="false" />
+                    <TextBlock class="metric" text="{{ MemoryGen0Value }}" wrap="false" />
+                  </LinearLayout>
+                  <LinearLayout class="metric-cell" orientation="vertical" spacing="1su">
+                    <TextBlock class="caption faint" text="GEN 1" wrap="false" />
+                    <TextBlock class="metric" text="{{ MemoryGen1Value }}" wrap="false" />
+                  </LinearLayout>
+                  <LinearLayout class="metric-cell" orientation="vertical" spacing="1su">
+                    <TextBlock class="caption faint" text="GEN 2 / LOH" wrap="false" />
+                    <TextBlock class="metric" text="{{ MemoryGen2Value }}" wrap="false" />
+                  </LinearLayout>
+                </GridLayout>
+              </LinearLayout>
+
+              <LinearLayout class="section" orientation="vertical" spacing="0px" width="100%">
+                <FlexLayout class="section-heading" direction="row" align-items="center" justify-content="space-between" width="100%" height="6su">
+                  <TextBlock class="caption" text="PROCESS" wrap="false" />
+                  <TextBlock class="caption faint end" text="current host process" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Working set" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ MemoryWorkingSetValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Private memory" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ MemoryPrivateValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="GC pause share" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ MemoryPauseValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <LinearLayout class="actions" orientation="vertical" spacing="0px" width="100%">
+                  <Button
+                    class="overlay"
+                    text="Collect garbage"
+                    width="100%"
+                    height="7su"
+                    onClicked="CollectGarbage()" />
+                </LinearLayout>
+              </LinearLayout>
+
+              <LinearLayout class="section" orientation="vertical" spacing="0px" width="100%">
+                <FlexLayout class="section-heading" direction="row" align-items="center" justify-content="space-between" width="100%" height="6su">
+                  <TextBlock class="caption" text="RETAINED BY FRAMEWORK" wrap="false" />
+                  <TextBlock class="caption faint end" text="{{ RetainedText }}" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Layout nodes" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ LayoutNodeCountValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Hit regions" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ HitRegionCountValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Raster cache" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ RasterCacheSizeValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+              </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+              visible='{{ SelectedTab == "accessibility" }}'
+              orientation="vertical"
+              spacing="0px"
+              width="100%">
+              <LinearLayout class="notice" orientation="vertical" spacing="0px" width="100%">
+                <TextBlock class="notice-text" text="These options affect the target window's visual accessibility pipeline. High contrast is applied during composition, not by the DevTools host." />
+              </LinearLayout>
+              <LinearLayout class="section" orientation="vertical" spacing="0px" width="100%">
+                <FlexLayout class="section-heading" direction="row" align-items="center" justify-content="space-between" width="100%" height="6su">
+                  <TextBlock class="caption" text="VISUAL ACCESSIBILITY" wrap="false" />
+                  <TextBlock class="caption faint end" text="{{ VisionText }}" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="Color vision" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ ColorVisionValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+                <FlexLayout class="property" direction="row" align-items="center" width="100%" height="7su">
+                  <TextBlock  text="High contrast" width="30su" wrap="false" />
+                  <TextBlock class="property-value" text="{{ HighContrastValue }}" flex-grow="1" wrap="false" />
+                </FlexLayout>
+              </LinearLayout>
+            </LinearLayout>
+          </LinearLayout>
+        </ScrollViewport>
+      </LinearLayout>
+    </FlexLayout>
+
+    <LinearLayout class="rule" orientation="horizontal" width="100%" height="1hx" />
+
+    <LinearLayout
+      class="statusbar"
+      orientation="horizontal"
+      spacing="0px"
+      width="100%"
+      height="6su"
+      flex-shrink="0">
+      <FlexLayout
+        direction="row"
+        align-items="center"
+        width="0px"
+        weight="1"
+        column-gap="1su">
+        <TextBlock class="{{ SnapshotStateDotClass }}" text="●" wrap="false" />
+        <TextBlock class="caption" text="{{ StatusSummaryValue }}" wrap="false" />
+      </FlexLayout>
+      <TextBlock class="caption faint" text="F12  TOGGLE" wrap="false" />
+    </LinearLayout>
+
+    <MemoryProbe visible="false" width="0px" height="0px" />
+  </FlexLayout>
+</Page>

@@ -14,8 +14,9 @@ internal sealed class MarkupLoopHeaderParser {
 
     public MarkupLoopHeader Parse(string header, int offset) {
         var parts = SplitTopLevel(header, ';');
-        var loop = parts[0].Trim();
+        var loop = Trimmed(parts[0], out var loopStart);
         if (loop.StartsWith("var ", StringComparison.Ordinal)) {
+            loopStart += 4 + LeadingWhitespace(loop, 4);
             loop = loop.Substring(4).TrimStart();
         }
 
@@ -26,18 +27,25 @@ internal sealed class MarkupLoopHeaderParser {
                 offset);
             return new MarkupLoopHeader(
                 "$item",
+                -1,
                 "global::System.Array.Empty<object>()",
+                -1,
                 null);
         }
 
         var variable = loop.Substring(0, separator.Index).Trim();
-        var iterable = loop.Substring(separator.Index + separator.Length).Trim();
+        var iterableStart = separator.Index + separator.Length;
+        var iterable = loop.Substring(iterableStart).TrimStart();
+        iterableStart += LeadingWhitespace(loop, separator.Index + separator.Length);
         string? track = null;
+        var trackOffset = -1;
 
         for (var index = 1; index < parts.Count; index++) {
-            var clause = parts[index].Trim();
+            var clause = Trimmed(parts[index], out var clauseStart);
             if (clause.StartsWith("track ", StringComparison.Ordinal)) {
-                track = clause.Substring("track ".Length).Trim();
+                var trackStart = "track ".Length + LeadingWhitespace(clause, "track ".Length);
+                track = clause.Substring("track ".Length).TrimStart();
+                trackOffset = Locate(offset, clauseStart + trackStart);
             } else if (clause.Length > 0) {
                 Report($"Unsupported @for clause '{clause}'.", offset);
             }
@@ -51,7 +59,33 @@ internal sealed class MarkupLoopHeaderParser {
             Report("The @for iterable expression cannot be empty.", offset);
         }
 
-        return new MarkupLoopHeader(variable, iterable, track);
+        return new MarkupLoopHeader(
+            variable,
+            Locate(offset, loopStart + iterableStart),
+            iterable,
+            trackOffset,
+            track);
+    }
+
+    /// <summary>A clause without its surrounding whitespace, and where it starts in the header.</summary>
+    private static string Trimmed(Part part, out int start) {
+        start = part.Start + LeadingWhitespace(part.Text, 0);
+        return part.Text.Trim();
+    }
+
+    /// <summary>The count of whitespace characters a value starts with, up to <paramref name="limit"/>.</summary>
+    private static int LeadingWhitespace(string value, int from) {
+        var index = from;
+        while (index < value.Length && char.IsWhiteSpace(value[index])) {
+            index++;
+        }
+
+        return index - from;
+    }
+
+    /// <summary>An offset inside the header turned into one inside the document, or -1.</summary>
+    private static int Locate(int headerOffset, int relative) {
+        return headerOffset < 0 ? -1 : headerOffset + relative;
     }
 
     private static (int Index, int Length) FindLoopSeparator(string loop) {
@@ -66,8 +100,10 @@ internal sealed class MarkupLoopHeaderParser {
             : (@in, 4);
     }
 
-    private static IReadOnlyList<string> SplitTopLevel(string value, char separator) {
-        var parts = new List<string>();
+    private readonly record struct Part(string Text, int Start);
+
+    private static IReadOnlyList<Part> SplitTopLevel(string value, char separator) {
+        var parts = new List<Part>();
         var start = 0;
         var nesting = 0;
         char? quote = null;
@@ -94,12 +130,12 @@ internal sealed class MarkupLoopHeaderParser {
             } else if (current is ')' or ']' or '}') {
                 nesting--;
             } else if (current == separator && nesting == 0) {
-                parts.Add(value.Substring(start, index - start));
+                parts.Add(new Part(value.Substring(start, index - start), start));
                 start = index + 1;
             }
         }
 
-        parts.Add(value.Substring(start));
+        parts.Add(new Part(value.Substring(start), start));
         return parts;
     }
 

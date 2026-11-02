@@ -101,7 +101,7 @@ public sealed class Option :
                 Value = value?.ToString();
                 break;
             case "selected":
-                IsSelected = ControlValueParser.ReadBoolean(value) ?? false;
+                IsSelected = value is bool isSelected && isSelected;
                 Accessibility.Value = IsSelected ? "selected" : "unselected";
                 break;
         }

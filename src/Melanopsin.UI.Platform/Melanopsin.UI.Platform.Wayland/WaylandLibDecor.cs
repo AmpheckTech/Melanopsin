@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using NWayland.Protocols.Wayland;
@@ -8,13 +9,15 @@ internal sealed unsafe class WaylandLibDecorContext : IDisposable {
     private static readonly LibDecorNative.LibDecorInterface* Interface =
         CreateInterface();
 
-    private static readonly Dictionary<IntPtr, WaylandLibDecorContext> Contexts = [];
+    private static readonly ConcurrentDictionary<IntPtr, WaylandLibDecorContext> Contexts = [];
 
     private readonly Action<string> _onError;
+    private readonly object _lifetimeLock = new();
     private IntPtr _handle;
     private bool _disposed;
 
     public WaylandLibDecorContext(IntPtr display, Action<string> onError) {
+        LibDecorPluginDirectory.PreferCairoBackend();
         _onError = onError;
         _handle = LibDecorNative.New(display, Interface);
         if (_handle == IntPtr.Zero) {
@@ -22,16 +25,18 @@ internal sealed unsafe class WaylandLibDecorContext : IDisposable {
                 "libdecor could not be initialized for the Wayland display.");
         }
 
-        Contexts.Add(_handle, this);
+        Contexts[_handle] = this;
     }
 
     public IntPtr Handle => _handle;
 
     public int Dispatch(int timeoutMilliseconds) {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-        return LibDecorNative.Dispatch(
-            _handle,
-            timeoutMilliseconds < 0 ? -1 : timeoutMilliseconds);
+        lock (_lifetimeLock) {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            return LibDecorNative.Dispatch(
+                _handle,
+                timeoutMilliseconds < 0 ? -1 : timeoutMilliseconds);
+        }
     }
 
     public WaylandDecoration Decorate(
@@ -39,25 +44,40 @@ internal sealed unsafe class WaylandLibDecorContext : IDisposable {
         WlSurface surface,
         string title,
         PixelSize initialLogicalSize) {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-        return new WaylandDecoration(
-            this,
-            window,
-            surface,
-            title,
-            initialLogicalSize);
+        lock (_lifetimeLock) {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            return new WaylandDecoration(
+                this,
+                window,
+                surface,
+                title,
+                initialLogicalSize);
+        }
     }
 
     public void Dispose() {
-        if (_disposed) {
-            return;
+        IntPtr handle;
+        lock (_lifetimeLock) {
+            if (_disposed) {
+                return;
+            }
+
+            _disposed = true;
+            handle = _handle;
+            _handle = IntPtr.Zero;
         }
 
-        _disposed = true;
-        if (_handle != IntPtr.Zero) {
-            Contexts.Remove(_handle);
-            LibDecorNative.Unref(_handle);
-            _handle = IntPtr.Zero;
+        if (handle != IntPtr.Zero) {
+            _ = Contexts.TryRemove(handle, out _);
+            LibDecorNative.Unref(handle);
+        }
+    }
+
+    private void ReportError(string text) {
+        lock (_lifetimeLock) {
+            if (!_disposed) {
+                _onError(text);
+            }
         }
     }
 
@@ -79,10 +99,14 @@ internal sealed unsafe class WaylandLibDecorContext : IDisposable {
             return;
         }
 
-        var text = Marshal.PtrToStringUTF8((IntPtr)message) ??
-            error.ToString();
-        if (Contexts.TryGetValue(context, out var self)) {
-            self._onError(text);
+        try {
+            var text = Marshal.PtrToStringUTF8((IntPtr)message) ??
+                error.ToString();
+            if (Contexts.TryGetValue(context, out var self)) {
+                self.ReportError(text);
+            }
+        } catch {
+            // Managed exceptions must never cross an UnmanagedCallersOnly ABI.
         }
     }
 
@@ -158,6 +182,10 @@ internal sealed unsafe class WaylandDecoration : IDisposable {
     }
 
     private void Configure(IntPtr configuration) {
+        if (_disposed) {
+            return;
+        }
+
         var width = Window?.LogicalSize.Width ?? InitialLogicalSize.Width;
         var height = Window?.LogicalSize.Height ?? InitialLogicalSize.Height;
         if (LibDecorNative.ConfigurationGetContentSize(
@@ -191,11 +219,15 @@ internal sealed unsafe class WaylandDecoration : IDisposable {
     }
 
     private void RequestClose() {
-        Window?.OnDecorationCloseRequested();
+        if (!_disposed) {
+            Window?.OnDecorationCloseRequested();
+        }
     }
 
     private void CommitSurface() {
-        Window?.CommitSurface();
+        if (!_disposed) {
+            Window?.CommitSurface();
+        }
     }
 
     private static LibDecorNative.LibDecorFrameInterface* CreateFrameInterface() {
@@ -215,17 +247,29 @@ internal sealed unsafe class WaylandDecoration : IDisposable {
         IntPtr frame,
         IntPtr configuration,
         IntPtr userData) {
-        GetDecoration(userData)?.Configure(configuration);
+        try {
+            GetDecoration(userData)?.Configure(configuration);
+        } catch {
+            // Managed exceptions must never cross an UnmanagedCallersOnly ABI.
+        }
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static void OnClose(IntPtr frame, IntPtr userData) {
-        GetDecoration(userData)?.RequestClose();
+        try {
+            GetDecoration(userData)?.RequestClose();
+        } catch {
+            // Managed exceptions must never cross an UnmanagedCallersOnly ABI.
+        }
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static void OnCommit(IntPtr frame, IntPtr userData) {
-        GetDecoration(userData)?.CommitSurface();
+        try {
+            GetDecoration(userData)?.CommitSurface();
+        } catch {
+            // Managed exceptions must never cross an UnmanagedCallersOnly ABI.
+        }
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]

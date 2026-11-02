@@ -15,6 +15,7 @@ internal static class OpenTypeFontParser {
         int faceIndex) {
         ArgumentNullException.ThrowIfNull(data);
         ArgumentOutOfRangeException.ThrowIfNegative(faceIndex);
+
         var memory = data.AsMemory();
         var reader = new FontBinaryReader(memory.Span);
         if (reader.Length < 12) {
@@ -24,14 +25,21 @@ internal static class OpenTypeFontParser {
         var headerOffset = 0;
         var version = reader.ReadUInt32(headerOffset);
         if (version == CollectionVersion) {
-            var faceCount = checked((int)reader.ReadUInt32(8));
+            var collectionFaceCount = reader.ReadUInt32(8);
+            if (collectionFaceCount > OpenTypeLimits.MaximumCollectionFaces) {
+                throw new InvalidDataException(
+                    "The font collection declares too many faces.");
+            }
+
+            var faceCount = (int)collectionFaceCount;
             if (faceIndex >= faceCount) {
                 throw new ArgumentOutOfRangeException(
                     nameof(faceIndex),
                     $"Font collection contains {faceCount} face(s).");
             }
 
-            headerOffset = checked((int)reader.ReadUInt32(12 + (faceIndex * 4)));
+            headerOffset = checked((int)reader.ReadUInt32(
+                checked(12 + (faceIndex * 4))));
             version = reader.ReadUInt32(headerOffset);
         } else if (faceIndex != 0) {
             throw new ArgumentOutOfRangeException(
@@ -49,15 +57,33 @@ internal static class OpenTypeFontParser {
         }
 
         var tableCount = reader.ReadUInt16(headerOffset + 4);
+        if (tableCount > OpenTypeLimits.MaximumTablesPerFace) {
+            throw new InvalidDataException(
+                "The font declares too many SFNT tables.");
+        }
+
+        var directoryLength = checked(12 + (tableCount * 16));
+        _ = reader.Slice(headerOffset, directoryLength);
         var tables = new Dictionary<string, SfntTable>(tableCount, StringComparer.Ordinal);
         for (var index = 0; index < tableCount; index++) {
-            var recordOffset = headerOffset + 12 + (index * 16);
+            var recordOffset = checked(headerOffset + 12 + (index * 16));
             var tag = Encoding.ASCII.GetString(reader.Slice(recordOffset, 4));
             var offset = checked((int)reader.ReadUInt32(recordOffset + 8));
             var length = checked((int)reader.ReadUInt32(recordOffset + 12));
             _ = reader.Slice(offset, length);
-            tables[tag] = new SfntTable(tag, offset, length);
+            if (!tables.TryAdd(tag, new SfntTable(tag, offset, length))) {
+                throw new InvalidDataException(
+                    $"The font contains duplicate '{tag}' tables.");
+            }
         }
+
+        // Colour faces carry one of these tables; the name differs per
+        // technology (COLR v0/v1, embedded bitmaps, Apple sbix, SVG glyphs).
+        var hasColorGlyphs =
+            tables.ContainsKey("COLR") ||
+            tables.ContainsKey("CBDT") ||
+            tables.ContainsKey("sbix") ||
+            tables.ContainsKey("SVG ");
 
         var head = RequireTable(tables, "head");
         RequireTableLength(head, 54);
@@ -109,7 +135,7 @@ internal static class OpenTypeFontParser {
             cmapTable.Length);
         var fallbackName = GetFallbackName(sourceName);
         var (familyName, styleName) = tables.TryGetValue("name", out var name)
-            ? FontNameReader.Read(memory, name.Offset, fallbackName)
+            ? FontNameReader.Read(memory, name.Offset, name.Length, fallbackName)
             : (fallbackName, "Regular");
 
         return new FontFace(
@@ -122,7 +148,8 @@ internal static class OpenTypeFontParser {
             hmtx.Offset,
             horizontalMetricCount,
             cmap,
-            faceIndex);
+            faceIndex,
+            hasColorGlyphs);
     }
 
     private static SfntTable RequireTable(

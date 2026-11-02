@@ -6,13 +6,18 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <IlcOptimizationPreference>Size</IlcOptimizationPreference>
     <ServerGarbageCollection>false</ServerGarbageCollection>
-    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    <!-- Background GC keeps segments committed after the managed heap shrinks.
+         The demo is a small, idle-ish client, so blocking gen2 collections are
+         short and the steadier resident set is worth it. -->
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
     <RootNamespace>Melanopsin.UI.Demo</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../src/Melanopsin.UI.Desktop/Melanopsin.UI.Desktop.csproj" />
     <ProjectReference Include="../../src/Melanopsin.UI/Melanopsin.UI.csproj" />
     <ProjectReference Include="../../src/Melanopsin.UI.Controls/Melanopsin.UI.Controls.csproj" />
+    <ProjectReference Include="../../src/Melanopsin.UI.DevTools/Melanopsin.UI.DevTools.csproj" />
     <ProjectReference
       Include="../../src/Melanopsin.UI.Markup.Compiler/Melanopsin.UI.Markup.Compiler.csproj"
       OutputItemType="Analyzer"
@@ -24,18 +29,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <AdditionalFiles Include="Views/**/*.xml" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="Styles/**/*" CopyToOutputDirectory="PreserveNewest" />
+    <AdditionalFiles Include="Views/**/*.mxml" />
+    <AdditionalFiles Include="Styles/**/*.css" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="Melanopsin.Graphics" />
     <Using Include="Melanopsin.Graphics.Rendering" />
     <Using Include="Melanopsin.UI.Controls" />
-    <Using Include="Melanopsin.UI.Hosting" />
     <Using Include="Melanopsin.UI.Layout" />
     <Using Include="Melanopsin.UI.Rendering" />
   </ItemGroup>

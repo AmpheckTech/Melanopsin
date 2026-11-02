@@ -5,6 +5,7 @@ namespace Melanopsin.UI.Platform.Win32.Windowing;
 
 internal sealed class Win32WindowRegistry {
     private readonly Dictionary<WindowId, Win32Window> _windows = [];
+    private readonly Dictionary<IntPtr, Win32Window> _windowsByHandle = [];
 
     public int Count => _windows.Count;
 
@@ -12,6 +13,7 @@ internal sealed class Win32WindowRegistry {
 
     public void Add(Win32Window window) {
         _windows.Add(window.Id, window);
+        _windowsByHandle.Add(window.Handle, window);
     }
 
     public bool TryGet(WindowId id, out Win32Window window) {
@@ -19,19 +21,16 @@ internal sealed class Win32WindowRegistry {
     }
 
     public bool TryGet(IntPtr handle, out Win32Window window) {
-        foreach (var candidate in _windows.Values) {
-            if (candidate.Handle == handle) {
-                window = candidate;
-                return true;
-            }
-        }
-
-        window = null!;
-        return false;
+        return _windowsByHandle.TryGetValue(handle, out window!);
     }
 
     public bool Remove(WindowId id, out Win32Window window) {
-        return _windows.Remove(id, out window!);
+        if (!_windows.Remove(id, out window!)) {
+            return false;
+        }
+
+        _windowsByHandle.Remove(window.Handle);
+        return true;
     }
 
     public void CloseAll() {
@@ -53,6 +52,7 @@ internal sealed class Win32WindowRegistry {
             }
         } finally {
             _windows.Clear();
+            _windowsByHandle.Clear();
         }
 
         if (failures is not null) {

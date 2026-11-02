@@ -7,6 +7,7 @@ using Melanopsin.UI.Rendering;
 namespace Melanopsin.UI.Platform.Win32.Input;
 
 internal sealed class Win32WindowEventQueue {
+    private const int MaximumImeCompositionBytes = 1024 * 1024;
     private readonly Queue<WindowEvent> _events = [];
 
     public void Clear() {
@@ -193,18 +194,24 @@ internal sealed class Win32WindowEventQueue {
                 index,
                 IntPtr.Zero,
                 0);
-            if (byteCount <= 0) {
+            if (byteCount <= 0 || byteCount > MaximumImeCompositionBytes) {
                 return string.Empty;
             }
 
-            var buffer = Marshal.AllocHGlobal(byteCount + sizeof(char));
+            var buffer = Marshal.AllocHGlobal(byteCount);
             try {
-                _ = Win32Native.ImmGetCompositionStringW(
+                var copied = Win32Native.ImmGetCompositionStringW(
                     context,
                     index,
                     buffer,
                     byteCount);
-                return Marshal.PtrToStringUni(buffer, byteCount / sizeof(char)) ??
+                if (copied < 0 || copied > byteCount) {
+                    // The composition can change between the size query and the
+                    // copy. Drop a stale snapshot instead of reading it.
+                    return string.Empty;
+                }
+
+                return Marshal.PtrToStringUni(buffer, copied / sizeof(char)) ??
                     string.Empty;
             } finally {
                 Marshal.FreeHGlobal(buffer);

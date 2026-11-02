@@ -48,7 +48,7 @@ public static class ResourcePackWriter {
             descriptors.Add(descriptor.Id, descriptor);
         }
 
-        ValidatePack(descriptors, order, grouped);
+        var resources = PreparePack(descriptors, order, grouped);
 
         using var writer = new BinaryWriter(
             output,
@@ -58,26 +58,22 @@ public static class ResourcePackWriter {
         writer.Write(ResourcePackFormat.Version);
         writer.Write((ushort)0);
         writer.Write(checked((uint)order.Count));
-        foreach (var id in order) {
-            if (!descriptors.TryGetValue(id, out var descriptor)) {
-                throw new ArgumentException(
-                    $"Resource id '{id}' is not declared by the application contract.",
-                    nameof(values));
-            }
-
-            WriteResource(writer, descriptor, grouped[id]);
+        foreach (var resource in resources) {
+            WriteResource(writer, resource);
         }
 
         writer.Flush();
     }
 
-    private static void ValidatePack(
+    private static List<PreparedResource> PreparePack(
         IReadOnlyDictionary<string, ResourceDescriptor> descriptors,
         IReadOnlyList<string> order,
         IReadOnlyDictionary<string, List<ResourcePackValue>> grouped) {
         var totalValues = 0;
         long totalBlobBytes = 0;
         long totalDecodedBytes = 0;
+        long totalTextBytes = 0;
+        var resources = new List<PreparedResource>(order.Count);
         foreach (var id in order) {
             if (!descriptors.TryGetValue(id, out var descriptor)) {
                 throw new ArgumentException(
@@ -85,7 +81,7 @@ public static class ResourcePackWriter {
                     nameof(grouped));
             }
 
-            _ = GetTextBytes(id);
+            AccountText(id, nameof(grouped), ref totalTextBytes);
             var resourceValues = grouped[id];
             if (resourceValues.Count > ResourcePackFormat.MaxValuesPerResource) {
                 throw new ArgumentException(
@@ -93,6 +89,8 @@ public static class ResourcePackWriter {
                     nameof(grouped));
             }
 
+            var preparedValues =
+                new List<PreparedResourceValue>(resourceValues.Count);
             var seenVariants = new HashSet<ResourceVariant>();
             foreach (var value in resourceValues) {
                 if (!seenVariants.Add(value.Variant)) {
@@ -101,7 +99,12 @@ public static class ResourcePackWriter {
                         nameof(grouped));
                 }
 
-                ValidateVariant(descriptor, value.Variant);
+                var flags = ValidateVariant(descriptor, value.Variant);
+                AccountVariantText(
+                    value.Variant,
+                    flags,
+                    nameof(grouped),
+                    ref totalTextBytes);
                 var blob = ResourcePackCodec.Encode(descriptor, value.Value);
                 if (blob.Length > ResourcePackFormat.MaxBlobBytes) {
                     throw new ArgumentException(
@@ -123,7 +126,7 @@ public static class ResourcePackWriter {
                 }
 
                 totalBlobBytes += blob.Length;
-                var decodedBytes = EstimateDecodedBytes(value.Value!);
+                var decodedBytes = ResourcePackCodec.EstimateDecodedBytes(value.Value!);
                 if (decodedBytes >
                     ResourcePackFormat.MaxTotalDecodedBytes - totalDecodedBytes) {
                     throw new ArgumentException(
@@ -132,50 +135,37 @@ public static class ResourcePackWriter {
                 }
 
                 totalDecodedBytes += decodedBytes;
+                preparedValues.Add(new PreparedResourceValue(
+                    value.Variant,
+                    flags,
+                    blob));
             }
+
+            resources.Add(new PreparedResource(descriptor, preparedValues));
         }
+
+        return resources;
     }
 
     private static void WriteResource(
         BinaryWriter writer,
-        ResourceDescriptor descriptor,
-        IReadOnlyList<ResourcePackValue> values) {
-        if (values.Count > ResourcePackFormat.MaxValuesPerResource) {
-            throw new ArgumentException(
-                $"Resource id '{descriptor.Id}' declares too many variants.",
-                nameof(values));
-        }
-
+        PreparedResource resource) {
+        var descriptor = resource.Descriptor;
+        var values = resource.Values;
         WriteText(writer, descriptor.Id);
         writer.Write((byte)descriptor.Kind);
         writer.Write(checked((uint)values.Count));
-        var seenVariants = new HashSet<ResourceVariant>();
         foreach (var value in values) {
-            if (!seenVariants.Add(value.Variant)) {
-                throw new ArgumentException(
-                    $"Resource id '{descriptor.Id}' contains a duplicate variant.",
-                    nameof(values));
-            }
-
-            WriteVariant(writer, descriptor, value.Variant);
-            var blob = ResourcePackCodec.Encode(descriptor, value.Value);
-            if (blob.Length > ResourcePackFormat.MaxBlobBytes) {
-                throw new ArgumentException(
-                    $"Resource id '{descriptor.Id}' contains a value that is too large.",
-                    nameof(values));
-            }
-
-            writer.Write(checked((uint)blob.Length));
-            writer.Write(blob);
+            WriteVariant(writer, value.Variant, value.Flags);
+            writer.Write(checked((uint)value.Blob.Length));
+            writer.Write(value.Blob);
         }
     }
 
     private static void WriteVariant(
         BinaryWriter writer,
-        ResourceDescriptor descriptor,
-        ResourceVariant variant) {
-        var flags = GetVariantFlags(descriptor, variant);
-        ValidateVariantText(variant, flags);
+        ResourceVariant variant,
+        ResourceVariantKinds flags) {
         writer.Write((byte)flags);
         if ((flags & ResourceVariantKinds.Culture) != 0) {
             WriteText(writer, variant.Culture!);
@@ -194,7 +184,7 @@ public static class ResourcePackWriter {
         }
     }
 
-    private static void ValidateVariant(
+    private static ResourceVariantKinds ValidateVariant(
         ResourceDescriptor descriptor,
         ResourceVariant variant) {
         var flags = GetVariantFlags(descriptor, variant);
@@ -204,6 +194,8 @@ public static class ResourcePackWriter {
                 $"Resource id '{descriptor.Id}' contains an invalid display scale.",
                 nameof(variant));
         }
+
+        return flags;
     }
 
     private static ResourceVariantKinds GetVariantFlags(
@@ -252,6 +244,40 @@ public static class ResourcePackWriter {
         }
     }
 
+    private static void AccountVariantText(
+        ResourceVariant variant,
+        ResourceVariantKinds flags,
+        string parameterName,
+        ref long totalTextBytes) {
+        if ((flags & ResourceVariantKinds.Culture) != 0) {
+            AccountText(variant.Culture!, parameterName, ref totalTextBytes);
+        }
+
+        if ((flags & ResourceVariantKinds.Theme) != 0) {
+            AccountText(variant.Theme!, parameterName, ref totalTextBytes);
+        }
+
+        if ((flags & ResourceVariantKinds.Style) != 0) {
+            AccountText(variant.Style!, parameterName, ref totalTextBytes);
+        }
+    }
+
+    private static void AccountText(
+        string value,
+        string parameterName,
+        ref long totalTextBytes) {
+        var bytes = GetTextBytes(value);
+        var memoryBytes = checked((long)bytes.Length * sizeof(char));
+        if (memoryBytes >
+            ResourcePackFormat.MaxTotalTextBytes - totalTextBytes) {
+            throw new ArgumentException(
+                "The resource pack exceeds the total text metadata budget.",
+                parameterName);
+        }
+
+        totalTextBytes += memoryBytes;
+    }
+
     private static void WriteText(BinaryWriter writer, string value) {
         var bytes = GetTextBytes(value);
         writer.Write(checked((uint)bytes.Length));
@@ -278,13 +304,12 @@ public static class ResourcePackWriter {
         return bytes;
     }
 
-    private static long EstimateDecodedBytes(object value) {
-        return value switch {
-            string text => StrictUtf8.GetByteCount(text),
-            ImageResource image => image.Data.Length,
-            FontFace font => font.Data.Length,
-            byte[] data => data.Length,
-            _ => 0,
-        };
-    }
+    private sealed record PreparedResource(
+        ResourceDescriptor Descriptor,
+        IReadOnlyList<PreparedResourceValue> Values);
+
+    private sealed record PreparedResourceValue(
+        ResourceVariant Variant,
+        ResourceVariantKinds Flags,
+        byte[] Blob);
 }

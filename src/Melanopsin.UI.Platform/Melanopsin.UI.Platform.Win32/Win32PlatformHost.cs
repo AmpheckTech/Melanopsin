@@ -18,6 +18,7 @@ public sealed class Win32PlatformHost : IPlatformWindowHost {
     private readonly IntPtr _instance;
     private readonly string _className;
     private readonly bool _timerPeriodSet;
+    private float _displayScale = 1f;
     private bool _classRegistered;
     private bool _disposed;
     private Exception? _cleanupFailure;
@@ -39,19 +40,20 @@ public sealed class Win32PlatformHost : IPlatformWindowHost {
         }
 
         var dpi = Win32Native.GetDpiForSystem();
-        DisplayScale = dpi > 0 ? dpi / 96f : 1f;
+        UpdateDisplayScale(dpi > 0 ? dpi / 96f : 1f);
         _timerPeriodSet = Win32Native.timeBeginPeriod(1) == 0;
         _className = $"Melanopsin.UI.{Environment.ProcessId}." +
             Interlocked.Increment(ref _presenterSequence);
         _windowProcedure = new Win32WindowMessageRouter(
             _windows,
-            _events).WindowProcedure;
+            _events,
+            UpdateDisplayScale).WindowProcedure;
         RegisterWindowClass();
     }
 
     public int WindowCount => _windows.Count;
 
-    public float DisplayScale { get; }
+    public float DisplayScale => Volatile.Read(ref _displayScale);
 
     /// <summary>
     /// The failure observed during the most recent disposal. Disposal records
@@ -268,6 +270,12 @@ public sealed class Win32PlatformHost : IPlatformWindowHost {
             action();
         } catch (Exception exception) {
             (failures ??= []).Add(exception);
+        }
+    }
+
+    private void UpdateDisplayScale(float displayScale) {
+        if (displayScale > 0 && float.IsFinite(displayScale)) {
+            Volatile.Write(ref _displayScale, displayScale);
         }
     }
 }

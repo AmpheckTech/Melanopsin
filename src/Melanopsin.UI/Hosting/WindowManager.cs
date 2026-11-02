@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Melanopsin.UI.App;
 using Melanopsin.UI.Layout;
 using Melanopsin.UI.Rendering;
@@ -10,7 +9,7 @@ namespace Melanopsin.UI.Hosting;
 /// Owns multiple independent UI windows. All windows share a backend choice,
 /// while each window keeps its own root tree, render context and render target.
 /// </summary>
-public sealed class WindowManager : IWindowHitTester, IDisposable {
+public sealed partial class WindowManager : IWindowHitTester, IDisposable {
     private static readonly bool TraceFrameTiming = string.Equals(
         Environment.GetEnvironmentVariable("MELANOPSIN_FRAME_TRACE"),
         "1",
@@ -25,6 +24,7 @@ public sealed class WindowManager : IWindowHitTester, IDisposable {
     private readonly float _displayScale;
     private readonly bool _ownsBackend;
     private readonly List<Window> _windows = [];
+    private readonly Dictionary<WindowId, Window> _windowsById = [];
     private readonly IReadOnlyList<Window> _windowsView;
     private long _nextWindowId;
     private int _disposed;
@@ -79,7 +79,7 @@ public sealed class WindowManager : IWindowHitTester, IDisposable {
 
     public Window? FindWindow(WindowId windowId) {
         ThrowIfDisposed();
-        return _windows.Find(candidate => candidate.Id == windowId);
+        return _windowsById.GetValueOrDefault(windowId);
     }
 
     IEnumerable<WindowId> IWindowTreeQuery.WindowIds =>
@@ -118,122 +118,6 @@ public sealed class WindowManager : IWindowHitTester, IDisposable {
             : new WindowHitTarget(hit.Node, hit.Bounds, hit.Route);
     }
 
-    public Window CreateWindow(WindowOptions options) {
-        ThrowIfDisposed();
-        ArgumentNullException.ThrowIfNull(options);
-
-        var windowId = new WindowId(++_nextWindowId);
-        var windowDescriptor = new WindowDescriptor(
-            windowId,
-            options.Title,
-            options.Size);
-        var renderTargetDescriptor = new RenderTargetDescriptor(options.Size);
-        IRenderTarget? target = null;
-        Window? window = null;
-        try {
-            target = _backend.CreateTarget(renderTargetDescriptor);
-            var windowStyles = new StyleEngine(
-                _styleEngine.Sheet,
-                _styleEngine.Metrics);
-            var renderContext = new WindowRenderContext(
-                windowStyles,
-                _layoutEngineFactory(windowStyles),
-                _sceneComposerFactory(windowStyles));
-            window = new Window(
-                windowDescriptor,
-                target,
-                ReplaceTarget,
-                renderContext,
-                _displayScale);
-            _windows.Add(window);
-            window.RaiseLifecycle(WindowLifecycleKind.Opened);
-            EnsureWindowCreationCompleted(window);
-            WindowCreated?.Invoke(window);
-            EnsureWindowCreationCompleted(window);
-            return window;
-        } catch (Exception exception) {
-            if (window is not null) {
-                _windows.Remove(window);
-            }
-
-            try {
-                if (window is not null) {
-                    window.Dispose();
-                } else {
-                    target?.Dispose();
-                }
-            } catch (Exception cleanupException) {
-                exception = new AggregateException(
-                    "The window creation failed and cleanup also failed.",
-                    exception,
-                    cleanupException);
-            }
-
-            throw exception;
-        }
-    }
-
-    private void EnsureWindowCreationCompleted(Window window) {
-        if (!_windows.Contains(window) || window.IsDisposed) {
-            throw new InvalidOperationException(
-                "A window was closed by an event handler before creation completed.");
-        }
-    }
-
-    public bool CloseWindow(WindowId windowId) {
-        return CloseWindow(windowId, closePlatformHost: true);
-    }
-
-    internal bool CloseWindow(WindowId windowId, bool closePlatformHost) {
-        ThrowIfDisposed();
-        var window = FindWindow(windowId);
-        if (window is null) {
-            return false;
-        }
-
-        // Remove the window first so callbacks and reentrant close requests cannot
-        // observe or dispose the same window twice.
-        _windows.Remove(window);
-        List<Exception>? failures = null;
-        if (closePlatformHost) {
-            try {
-                _platformHost?.CloseWindow(windowId);
-            } catch (Exception exception) {
-                (failures ??= []).Add(exception);
-            }
-        }
-
-        try {
-            window.Dispose();
-        } catch (Exception exception) {
-            (failures ??= []).Add(exception);
-        }
-
-        try {
-            WindowClosed?.Invoke(window);
-        } catch (Exception exception) {
-            (failures ??= []).Add(exception);
-        }
-
-        if (failures is not null) {
-            throw new AggregateException(
-                $"Window '{windowId}' did not close cleanly.",
-                failures);
-        }
-
-        return true;
-    }
-
-    public IReadOnlyList<RenderFrame> RenderAll(RenderOptions? options = null) {
-        ThrowIfDisposed();
-        return RenderWindows(options ?? RenderOptions.Default, dirtyOnly: false);
-    }
-
-    public IReadOnlyList<RenderFrame> RenderDirty(RenderOptions? options = null) {
-        ThrowIfDisposed();
-        return RenderWindows(options ?? RenderOptions.Default, dirtyOnly: true);
-    }
-
     public bool AdvanceAnimations(float elapsedSeconds) {
         ThrowIfDisposed();
         var changed = false;
@@ -260,6 +144,7 @@ public sealed class WindowManager : IWindowHitTester, IDisposable {
             }
         } finally {
             _windows.Clear();
+            _windowsById.Clear();
             if (_ownsBackend) {
                 try {
                     _backend.Dispose();
@@ -275,79 +160,6 @@ public sealed class WindowManager : IWindowHitTester, IDisposable {
                 "One or more windows failed to dispose cleanly.",
                 failures);
         Volatile.Write(ref _cleanupFailure, failure);
-    }
-
-    private IReadOnlyList<RenderFrame> RenderWindows(
-        RenderOptions options,
-        bool dirtyOnly) {
-        var frames = new List<RenderFrame>(_windows.Count);
-        var layoutChanged = false;
-
-        foreach (var window in _windows.ToArray()) {
-            if (dirtyOnly && !window.IsDirty) {
-                continue;
-            }
-
-            // Do not draw into an offscreen target while the platform is
-            // waiting for the compositor's frame callback. This mirrors
-            // Avalonia's RenderTargetNotReady/State.IsReady behavior and keeps
-            // interactive resize frames coalesced instead of rendering every
-            // configure event.
-            if (_platformHost is not null &&
-                !_platformHost.IsPresentationReady(window.Descriptor)) {
-                continue;
-            }
-
-            var layoutRevision = window.LayoutVersion;
-            var renderStarted = Stopwatch.GetTimestamp();
-            var frame = window.Render(options);
-
-            var presentStarted = Stopwatch.GetTimestamp();
-            _presenter?.Present(window.Descriptor, frame);
-            if (TraceFrameTiming) {
-                Console.Error.WriteLine(
-                    $"[ui] frame {window.Id} {frame.Descriptor.Size.Width}x{frame.Descriptor.Size.Height} " +
-                    $"layout={window.LastDiagnostics?.LayoutMilliseconds ?? 0:0.00}ms " +
-                    $"compose={window.LastDiagnostics?.ComposeMilliseconds ?? 0:0.00}ms " +
-                    $"raster={window.LastDiagnostics?.RenderMilliseconds ?? 0:0.00}ms " +
-                    $"render-total={Stopwatch.GetElapsedTime(renderStarted, presentStarted).TotalMilliseconds:0.00}ms " +
-                    $"present-call={Stopwatch.GetElapsedTime(presentStarted).TotalMilliseconds:0.00}ms");
-            }
-
-            TotalFramesPresented++;
-            window.MarkClean();
-            layoutChanged |= window.LayoutVersion != layoutRevision;
-            frames.Add(frame);
-        }
-
-        if (layoutChanged) {
-            PruneStyleState();
-        }
-
-        return frames;
-    }
-
-    private IRenderTarget ReplaceTarget(RenderTargetDescriptor descriptor) {
-        ThrowIfDisposed();
-        return _backend.CreateTarget(descriptor);
-    }
-
-    private void PruneStyleState() {
-        var liveNodes = new HashSet<Node>(
-            ReferenceEqualityComparer.Instance);
-        foreach (var window in _windows) {
-            if (window.Layout is not { } layout) {
-                continue;
-            }
-
-            foreach (var node in layout.Nodes) {
-                liveNodes.Add(node);
-            }
-        }
-
-        foreach (var window in _windows) {
-            window.RenderContext.Prune(liveNodes);
-        }
     }
 
     private void ThrowIfDisposed() {

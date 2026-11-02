@@ -6,12 +6,25 @@ internal static class FontNameReader {
     public static (string FamilyName, string StyleName) Read(
         ReadOnlyMemory<byte> data,
         int tableOffset,
+        int tableLength,
         string fallbackName) {
-        var reader = new FontBinaryReader(data.Span);
-        var count = reader.ReadUInt16(tableOffset + 2);
-        var stringsOffset = tableOffset + reader.ReadUInt16(tableOffset + 4);
-        var familyName = FindName(reader, tableOffset, stringsOffset, count, 1);
-        var styleName = FindName(reader, tableOffset, stringsOffset, count, 2);
+        if (tableLength < 6 ||
+            tableLength > OpenTypeLimits.MaximumNameTableBytes ||
+            tableOffset > data.Length - tableLength) {
+            throw new InvalidDataException(
+                "The font 'name' table is truncated.");
+        }
+
+        var reader = new FontBinaryReader(data.Span.Slice(tableOffset, tableLength));
+        var count = reader.ReadUInt16(2);
+        if (count > OpenTypeLimits.MaximumNameRecords) {
+            throw new InvalidDataException(
+                "The font 'name' table declares too many records.");
+        }
+
+        var stringsOffset = reader.ReadUInt16(4);
+        var familyName = FindName(reader, stringsOffset, count, 1);
+        var styleName = FindName(reader, stringsOffset, count, 2);
         return (
             string.IsNullOrWhiteSpace(familyName) ? fallbackName : familyName,
             string.IsNullOrWhiteSpace(styleName) ? "Regular" : styleName);
@@ -19,13 +32,12 @@ internal static class FontNameReader {
 
     private static string? FindName(
         FontBinaryReader reader,
-        int tableOffset,
         int stringsOffset,
         int count,
         int nameId) {
         string? fallback = null;
         for (var index = 0; index < count; index++) {
-            var recordOffset = tableOffset + 6 + (index * 12);
+            var recordOffset = 6 + (index * 12);
             var platformId = reader.ReadUInt16(recordOffset);
             var encodingId = reader.ReadUInt16(recordOffset + 2);
             var languageId = reader.ReadUInt16(recordOffset + 4);
@@ -35,7 +47,7 @@ internal static class FontNameReader {
             }
 
             var length = reader.ReadUInt16(recordOffset + 8);
-            var offset = stringsOffset + reader.ReadUInt16(recordOffset + 10);
+            var offset = checked(stringsOffset + reader.ReadUInt16(recordOffset + 10));
             var bytes = reader.Slice(offset, length);
             string? value = platformId switch {
                 0 => Encoding.BigEndianUnicode.GetString(bytes),

@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 
 namespace Melanopsin.UI.OpenGL;
@@ -70,8 +69,6 @@ internal sealed class WglSurface : IOpenGLSurface {
         Color clearColor,
         Action<int, int>? content) {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
         EnsureSize(width, height);
         MakeCurrent();
         return OpenGLFrameRenderer.Render(
@@ -90,22 +87,10 @@ internal sealed class WglSurface : IOpenGLSurface {
         }
 
         _disposed = true;
-        Exception? failure = null;
-        CaptureCleanupFailure(
-            ref failure,
-            () => _ = OpenGLNative.wglMakeCurrent(
-                IntPtr.Zero,
-                IntPtr.Zero));
-        CaptureCleanupFailure(
-            ref failure,
-            () => _ = OpenGLNative.wglDeleteContext(_context));
-        CaptureCleanupFailure(
-            ref failure,
-            () => _ = OpenGLNative.ReleaseDC(_window, _deviceContext));
-        CaptureCleanupFailure(
-            ref failure,
-            () => _ = OpenGLNative.DestroyWindow(_window));
-        ThrowIfFailed(failure);
+        _ = OpenGLNative.wglMakeCurrent(IntPtr.Zero, IntPtr.Zero);
+        _ = OpenGLNative.wglDeleteContext(_context);
+        _ = OpenGLNative.ReleaseDC(_window, _deviceContext);
+        _ = OpenGLNative.DestroyWindow(_window);
     }
 
     private void EnsureSize(int width, int height) {
@@ -131,24 +116,4 @@ internal sealed class WglSurface : IOpenGLSurface {
         }
     }
 
-    private static void CaptureCleanupFailure(
-        ref Exception? failure,
-        Action action) {
-        try {
-            action();
-        } catch (Exception exception) {
-            failure = failure is null
-                ? exception
-                : failure is AggregateException aggregate
-                    ? new AggregateException(
-                        aggregate.InnerExceptions.Append(exception))
-                    : new AggregateException(failure, exception);
-        }
-    }
-
-    private static void ThrowIfFailed(Exception? failure) {
-        if (failure is not null) {
-            ExceptionDispatchInfo.Capture(failure).Throw();
-        }
-    }
 }

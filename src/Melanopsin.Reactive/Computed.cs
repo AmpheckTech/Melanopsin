@@ -1,10 +1,8 @@
 namespace Melanopsin.Reactive;
 
 /// <summary>
-/// Lazily evaluated derived value. Reading it inside a tracking scope records
-/// both the computed value and the reactive sources read by its factory.
-/// Concurrent reads are serialized while computing, and invalidation during a
-/// computation keeps the value dirty.
+/// Lazily evaluated derived value that records the reactive sources its factory
+/// reads.
 /// </summary>
 public sealed class Computed<T> : IReadOnlySignal<T>, IReactiveSource {
     private readonly object _gate = new();

@@ -15,19 +15,16 @@ internal static class MarkupComponentValidator {
         MarkupDocument document,
         Compilation compilation) {
         if (document.Namespace is not { Length: > 0 } namespaceName ||
-            document.ClassName is not { Length: > 0 } className) {
+            document.ComponentName is not { Length: > 0 } componentName) {
             return Array.Empty<MarkupDiagnostic>();
         }
 
-        var metadataName = $"{namespaceName}.{className}";
+        var metadataName = $"{namespaceName}.{componentName}";
         var component = compilation.GetTypeByMetadataName(metadataName);
         if (component is null) {
-            return
-            [
-                Error(
-                    $"Component class '{metadataName}' must be declared as a partial class.",
-                    0),
-            ];
+            // A component that has no C# declaration is materialized by the generator, so the
+            // view can live entirely in markup.
+            return Array.Empty<MarkupDiagnostic>();
         }
 
         if (component.TypeKind != TypeKind.Class ||

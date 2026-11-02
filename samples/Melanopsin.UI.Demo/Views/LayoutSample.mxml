@@ -1,0 +1,163 @@
+<LinearLayout
+  package="Melanopsin.UI.Demo.Views"
+  component="LayoutSample"
+  class="layout-sample"
+  orientation="vertical"
+  spacing="0px"
+  width="100%">
+  <FlexLayout
+    class="page-intro"
+    direction="row"
+    align-items="end"
+    justify-content="space-between"
+    column-gap="4su"
+    width="100%"
+    height="18su"
+    flex-shrink="0">
+    <FlexLayout
+      direction="column"
+      justify-content="end"
+      row-gap="0.6su"
+      width="0px"
+      height="100%"
+      flex-grow="1">
+      <TextBlock class="eyebrow" text="Layout" wrap="false" />
+      <TextBlock class="page-title" text="Stress test" wrap="false" />
+      <TextBlock
+        class="page-summary"
+        text="Switch between wrapping, grid and nested layouts while changing the node count."
+        wrap="false" />
+    </FlexLayout>
+    <FlexLayout
+      class="run-info"
+      direction="column"
+      justify-content="end"
+      align-items="end"
+      row-gap="0.8su"
+      width="27su"
+      height="100%"
+      flex-shrink="0">
+      <TextBlock class="run-status" text="Live tree" wrap="false" />
+      <TextBlock class="run-note" text="Retained reconciliation" wrap="false" />
+    </FlexLayout>
+  </FlexLayout>
+
+  <LinearLayout class="layout-toolbar" orientation="vertical" spacing="1.5su" width="100%">
+    <FlexLayout
+      direction="row"
+      align-items="center"
+      column-gap="1su"
+      width="100%">
+      <Button
+        class="{{ FlowButtonClass }}"
+        text="Flow"
+        width="16su"
+        height="6su"
+        onClicked="SelectFlow()" />
+      <Button
+        class="{{ GridButtonClass }}"
+        text="Grid"
+        width="16su"
+        height="6su"
+        onClicked="SelectGrid()" />
+      <Button
+        class="{{ NestedButtonClass }}"
+        text="Nested"
+        width="18su"
+        height="6su"
+        onClicked="SelectNested()" />
+    </FlexLayout>
+
+    <FlexLayout
+      direction="row"
+      align-items="center"
+      column-gap="1su"
+      width="100%">
+      <Button
+        class="quiet-action"
+        text="− 80"
+        width="12su"
+        height="6su"
+        onClicked="RemoveStressNodes()" />
+      <Button
+        class="quiet-action"
+        text="+ 80"
+        width="12su"
+        height="6su"
+        onClicked="AddStressNodes()" />
+      <TextBlock
+        class="stage-meta"
+        text="{{ StressSummary }}"
+        width="0px"
+        flex-grow="1"
+        wrap="false" />
+    </FlexLayout>
+  </LinearLayout>
+
+  @if (ShowFlow) {
+    <FlexLayout
+      class="stress-surface chip-flow"
+      direction="row"
+      wrap="wrap"
+      align-items="center"
+      align-content="start"
+      column-gap="1su"
+      row-gap="1su"
+      width="100%">
+      @for (item of StressItems; track item.Index) {
+        <TextBlock
+          class="chip"
+          text="{{ item.Tag }}"
+          width="{{ item.ChipWidth }}"
+          height="5su"
+          wrap="false" />
+      }
+    </FlexLayout>
+  } @else if (ShowGrid) {
+    <GridLayout
+      class="node-grid"
+      columns="4"
+      column-gap="1su"
+      row-gap="1su"
+      width="100%">
+      @for (item of StressItems; track item.Index) {
+        <LinearLayout class="node-card" orientation="vertical" spacing="1su" width="100%">
+          <TextBlock class="node-title" text="{{ item.Title }}" width="100%" wrap="false" />
+          <TextBlock class="node-detail" text="{{ item.Detail }}" width="100%" wrap="false" />
+        </LinearLayout>
+      }
+    </GridLayout>
+  } @else {
+    <LinearLayout class="stress-surface" orientation="vertical" spacing="1su" width="100%">
+      @for (item of StressItems; track item.Index) {
+        <LinearLayout class="nest" orientation="vertical" spacing="1su" width="100%">
+          <LinearLayout class="nest" orientation="vertical" spacing="1su" width="100%">
+            <LinearLayout class="nest" orientation="horizontal" spacing="1su" width="100%">
+              <TextBlock
+                class="node-detail"
+                text="{{ item.Title }}"
+                width="30%"
+                wrap="false" />
+              <LinearLayout class="nest" orientation="vertical" spacing="1su" width="70%">
+                <LinearLayout class="nest" orientation="horizontal" spacing="1su" width="100%">
+                  <TextBlock
+                    class="node-detail"
+                    text="{{ item.Tag }}"
+                    width="40%"
+                    wrap="false" />
+                  <LinearLayout class="nest" orientation="vertical" spacing="1su" width="60%">
+                    <TextBlock
+                      class="node-detail"
+                      text="{{ item.Detail }}"
+                      width="100%"
+                      wrap="false" />
+                  </LinearLayout>
+                </LinearLayout>
+              </LinearLayout>
+            </LinearLayout>
+          </LinearLayout>
+        </LinearLayout>
+      }
+    </LinearLayout>
+  }
+</LinearLayout>

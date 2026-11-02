@@ -1,20 +1,15 @@
 using System.Globalization;
 using System.Text;
 using Melanopsin.Graphics.Text.Fonts;
-using Uax14Net;
 using Unicode.Bidi;
 
 namespace Melanopsin.Graphics.Text;
 
-public sealed class HarfBuzzTextShaper : ITextLayout, IDisposable {
+public sealed partial class HarfBuzzTextShaper : ITextLayout, IDisposable {
     private readonly FontCollection _fonts;
     private readonly HarfBuzzGlyphShaper _glyphShaper;
-    private readonly Dictionary<TextLayoutKey, ShapedText> _layouts = [];
-    private readonly Lock _layoutLock = new();
     private readonly ReaderWriterLockSlim _lifetimeLock =
         new(LockRecursionPolicy.NoRecursion);
-    private Exception? _disposeFailure;
-    private bool _disposed;
 
     public HarfBuzzTextShaper(FontCollection fonts) {
         ArgumentNullException.ThrowIfNull(fonts);
@@ -23,49 +18,6 @@ public sealed class HarfBuzzTextShaper : ITextLayout, IDisposable {
     }
 
     public FontCollection Fonts => _fonts;
-
-    /// <summary>
-    /// The failure observed during the most recent disposal. Disposal records
-    /// this value instead of throwing so it cannot mask an active exception.
-    /// </summary>
-    public Exception? LastDisposeFailure => Volatile.Read(ref _disposeFailure);
-
-    public ShapedText Layout(string text, in TextLayoutOptions options) {
-        ArgumentNullException.ThrowIfNull(text);
-        _lifetimeLock.EnterReadLock();
-        try {
-            var key = new TextLayoutKey(
-                text,
-                options.FontSize,
-                options.MaxWidth,
-                options.Direction,
-                options.Font,
-                _fonts.Version);
-            lock (_layoutLock) {
-                ObjectDisposedException.ThrowIf(_disposed, this);
-                if (_layouts.TryGetValue(key, out var cached)) {
-                    return cached;
-                }
-            }
-
-            var layout = ShapeText(text, options);
-            lock (_layoutLock) {
-                ObjectDisposedException.ThrowIf(_disposed, this);
-                if (_layouts.TryGetValue(key, out var cached)) {
-                    return cached;
-                }
-
-                if (_layouts.Count >= 1024) {
-                    _layouts.Clear();
-                }
-
-                _layouts[key] = layout;
-                return layout;
-            }
-        } finally {
-            _lifetimeLock.ExitReadLock();
-        }
-    }
 
     private ShapedText ShapeText(
         string text,
@@ -278,28 +230,6 @@ public sealed class HarfBuzzTextShaper : ITextLayout, IDisposable {
                 0,
                 0,
                 line.Height);
-        }
-    }
-
-    public void Dispose() {
-        _lifetimeLock.EnterWriteLock();
-        try {
-            lock (_layoutLock) {
-                if (_disposed) {
-                    return;
-                }
-
-                _disposed = true;
-                _layouts.Clear();
-            }
-
-            try {
-                _glyphShaper.Dispose();
-            } catch (Exception exception) {
-                Volatile.Write(ref _disposeFailure, exception);
-            }
-        } finally {
-            _lifetimeLock.ExitWriteLock();
         }
     }
 

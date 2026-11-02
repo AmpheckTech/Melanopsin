@@ -149,10 +149,8 @@ public sealed class AnimationTimeline {
     /// timeline after the final active duration is reached.
     /// </summary>
     /// <remarks>
-    /// The handler runs on the thread that called <c>Advance</c>, before that
-    /// method returns. Handlers should return quickly and must not block the
-    /// caller's animation loop. Exceptions propagate to the caller of
-    /// <c>Advance</c>. <see cref="Seek(float)"/> does not raise this event.
+    /// Raised on the thread that calls <c>Advance</c>, before it returns, so
+    /// handlers must not block. <see cref="Seek(float)"/> does not raise it.
     /// </remarks>
     public event EventHandler? Completed;
 
@@ -160,10 +158,8 @@ public sealed class AnimationTimeline {
     /// Starts or resumes the timeline.
     /// </summary>
     /// <remarks>
-    /// <see cref="AnimationState.Idle"/> starts from its current time,
-    /// <see cref="AnimationState.Paused"/> resumes, and
-    /// <see cref="AnimationState.Running"/> is a no-op. Playing a completed
-    /// timeline resets it to zero and starts a new run.
+    /// Playing a completed timeline resets it to zero and starts a new run;
+    /// <see cref="AnimationState.Running"/> is a no-op.
     /// </remarks>
     public void Play() {
         if (State == AnimationState.Completed) {
@@ -192,10 +188,8 @@ public sealed class AnimationTimeline {
     /// Advances the timeline by a number of seconds.
     /// </summary>
     /// <remarks>
-    /// This convenience overload converts seconds to <see cref="TimeSpan"/> at
-    /// the 100-nanosecond tick resolution. Use <see cref="Advance(TimeSpan)"/>
-    /// when the caller needs exact, externally accumulated time. The return
-    /// value has the same meaning as <see cref="Advance(TimeSpan)"/>.
+    /// Convenience overload that converts seconds at the 100-nanosecond tick
+    /// resolution; use <see cref="Advance(TimeSpan)"/> for exact accumulated time.
     /// </remarks>
     public bool Advance(float deltaSeconds) {
         if (!float.IsFinite(deltaSeconds) || deltaSeconds < 0) {
@@ -212,17 +206,9 @@ public sealed class AnimationTimeline {
     /// Advances a running timeline by <paramref name="delta"/>.
     /// </summary>
     /// <returns>
-    /// <see langword="true"/> when this call changes the timeline's elapsed time
-    /// or transitions it to <see cref="AnimationState.Completed"/>; otherwise
-    /// <see langword="false"/>. The terminal call that completes a finite
-    /// timeline returns <see langword="true"/>, while later calls and calls made
-    /// while idle or paused return <see langword="false"/>. This is not a
-    /// promise that the timeline remains active after the call.
+    /// <see langword="true"/> when the call changes elapsed time or completes the
+    /// timeline; <see langword="false"/> while idle, paused, or already complete.
     /// </returns>
-    /// <remarks>
-    /// <see cref="Completed"/> is raised synchronously on the thread calling
-    /// this method.
-    /// </remarks>
     public bool Advance(TimeSpan delta) {
         if (delta < TimeSpan.Zero) {
             throw new ArgumentOutOfRangeException(
@@ -264,9 +250,8 @@ public sealed class AnimationTimeline {
     /// duration and pauses it.
     /// </summary>
     /// <remarks>
-    /// Seeking to <c>1</c> marks the timeline complete but intentionally does
-    /// not raise <see cref="Completed"/>. Use <see cref="Play"/> to reset and
-    /// start a new run after completion.
+    /// Seeking to <c>1</c> marks the timeline complete without raising
+    /// <see cref="Completed"/>.
     /// </remarks>
     public void Seek(float progress) {
         if (!float.IsFinite(progress)) {

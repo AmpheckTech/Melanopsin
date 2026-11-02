@@ -28,16 +28,15 @@ public readonly record struct LayoutPassContext {
     public bool ViewportChanged { get; }
 
     /// <summary>
-    /// Layout nodes that changed before this pass. Multiple nodes may share
-    /// one pass; the layout engine attributes them to merged root-to-source paths.
-    /// The paths are diagnostics, not a promise to bypass necessary parent
-    /// measurement or arrange work.
+    /// Layout nodes that changed before this pass, attributed to merged
+    /// root-to-source paths. These paths are diagnostics, not a promise to bypass
+    /// necessary parent work.
     /// </summary>
     public IReadOnlyCollection<Node>? InvalidatedLayoutNodes { get; }
 
     /// <summary>
-    /// Requests full layout invalidation even when invalidated nodes are present. This
-    /// is used when a change cannot be attributed to a safe ancestor path.
+    /// Forces full invalidation even when nodes are listed, for changes that cannot
+    /// be attributed to a safe ancestor path.
     /// </summary>
     public bool ForceFullInvalidation { get; }
 

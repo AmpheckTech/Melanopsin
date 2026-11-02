@@ -1,0 +1,366 @@
+@tokens {
+    inspector: color = #101214;
+    chrome: color = #17191c;
+    sidebar: color = #141619;
+    data: color = #191d21;
+    data-heading: color = #1c2024;
+    data-hover: color = #22272c;
+    selected: color = #22332d;
+    selected-hover: color = #293e36;
+    selected-border: color = #3b5f50;
+    line: color = #2a3036;
+    line-soft: color = #23282d;
+    text: color = #dfe3e7;
+    text-strong: color = #f1f4f6;
+    text-muted: color = #969ea7;
+    text-faint: color = #6f7881;
+    accent: color = #74b99f;
+    success: color = #74b99f;
+    waiting: color = #d2a45d;
+    warning: color = #d2a45d;
+    danger: color = #e07d79;
+    notice: color = #18201d;
+    notice-border: color = #2b3c34;
+    hairline: length = 1hx;
+    small-radius: length = 1ru;
+    body-size: length = 10fu;
+    caption-size: length = 8.5fu;
+    title-size: length = 16fu;
+    metric-size: length = 15fu;
+    pointer-cursor: cursor = pointer;
+    resize-cursor: cursor = col-resize;
+}
+
+.devtools {
+    background: $inspector;
+    color: $text;
+    padding: 0px;
+    cursor: default;
+
+    & TextBlock {
+        color: $text-muted;
+        font-size: $body-size;
+    }
+
+    & Button {
+        background: transparent;
+        color: $text-muted;
+        border-width: 0px;
+        border-radius: 0px;
+        padding: 2su;
+        font-size: $caption-size;
+        text-align: center;
+        cursor: $pointer-cursor;
+        transition-duration: 100ms;
+
+        &:hover {
+            background: $data-hover;
+            color: $text;
+        }
+
+        &:pressed { background: $selected; }
+
+        &:focused {
+            color: $text-strong;
+        }
+
+        &:disabled {
+            color: $text-faint;
+            cursor: default;
+            opacity: 0.55;
+        }
+    }
+
+    & ScrollViewport {
+        background: transparent;
+        border-width: 0px;
+        padding: 0px;
+
+        &::track { background: transparent; }
+
+        &::thumb {
+            background: $line;
+            border-radius: 1su;
+            transition-duration: 120ms;
+            transition-easing: ease-out;
+        }
+
+        &::thumb:hover { background: $text-muted; }
+        &::thumb:pressed { background: $text; }
+    }
+
+    & .caption { font-size: $caption-size; }
+    & .faint { color: $text-faint; }
+    & .end { text-align: end; }
+
+    & .toolbar {
+        background: $chrome;
+        padding: 0px;
+    }
+
+    & .brand {
+        padding: 2su;
+
+        & .brand-title {
+            color: $text-strong;
+            font-size: 11fu;
+        }
+    }
+
+    & .tabs {
+        background: transparent;
+        padding: 0px;
+    }
+
+    & .tabs .tab {
+        font-size: 10fu;
+
+        &.selected {
+            background: $data;
+            color: $text-strong;
+
+            &:hover { background: $data-hover; }
+        }
+    }
+
+    & .presence {
+        padding: 2su;
+
+        & TextBlock { text-align: end; }
+    }
+    & .dot { font-size: 7fu; }
+    & .live { color: $success; }
+    & .waiting { color: $waiting; }
+
+    & .rule {
+        background: $line-soft;
+        padding: 0px;
+    }
+
+    & .sidebar {
+        background: $sidebar;
+        border-width: 0px;
+        padding: 0px;
+    }
+
+    & .sidebar-heading { padding: 1su; }
+
+    & .sidebar-label {
+        color: $text-faint;
+        font-size: $caption-size;
+        padding: 0px;
+    }
+
+    & .navigation {
+        background: transparent;
+        padding: 1su;
+    }
+
+    & .navigation .nav {
+        border-radius: $small-radius;
+        padding: 2su;
+        font-size: $body-size;
+        text-align: start;
+
+        &.selected {
+            background: $selected;
+            color: $text-strong;
+
+            &:hover { background: $selected-hover; }
+        }
+    }
+
+    & .sidebar-target {
+        background: transparent;
+        padding: 1su;
+    }
+
+    & .target-name {
+        color: $text;
+        font-size: $body-size;
+        padding: 0px;
+    }
+
+    & .target-context {
+        color: $text-faint;
+        font-size: $caption-size;
+        padding: 0px;
+    }
+
+    & .overlay {
+        background: transparent;
+        color: $text-muted;
+        border-color: $line;
+        border-width: $hairline;
+        border-radius: $small-radius;
+        font-size: $caption-size;
+        text-align: start;
+        transition-duration: 100ms;
+
+        &:hover {
+            background: $data-hover;
+            border-color: #3a424a;
+            color: $text;
+        }
+
+        &.selected {
+            background: $selected;
+            border-color: $selected-border;
+            color: $accent;
+
+            &:hover {
+                background: $selected-hover;
+                color: $text-strong;
+            }
+        }
+    }
+
+    & .resizer {
+        background: $line-soft;
+        color: $line;
+        cursor: $resize-cursor;
+
+        &:hover {
+            background: $data-hover;
+            color: $accent;
+        }
+
+        &:focused { color: $accent; }
+
+        &:pressed {
+            background: $selected;
+            color: $accent;
+        }
+    }
+
+    & .inspector {
+        background: $inspector;
+        border-width: 0px;
+        padding: 0px;
+    }
+
+    & .inspector-heading {
+        background: $inspector;
+        padding: 3su;
+    }
+
+    & .heading-copy { background: transparent; }
+
+    & .panel-title {
+        color: $text-strong;
+        font-size: $title-size;
+    }
+
+    & .panel-description {
+        color: $text-faint;
+        font-size: $caption-size;
+    }
+
+    & .shortcut {
+        background: $data;
+        border-color: $line;
+        border-width: $hairline;
+        border-radius: $small-radius;
+        color: $text-faint;
+        font-size: $caption-size;
+        padding: 1su;
+    }
+
+    & .panel { padding: 3su; }
+
+    & .metrics {
+        background: $data;
+        border-color: $line;
+        border-width: $hairline;
+        border-radius: $small-radius;
+        padding: 0px;
+        margin: 0px;
+    }
+
+    & .metric-cell { padding: 2su; }
+
+    & .metric {
+        color: $text-strong;
+        font-size: $metric-size;
+
+        &.warning { color: $warning; }
+        &.danger { color: $danger; }
+    }
+
+    & .budget {
+        background: transparent;
+        padding: 2su;
+    }
+
+    & .budget-track {
+        background: #2b3036;
+        border-radius: 0px;
+        padding: 0px;
+    }
+
+    & .budget-fill {
+        background: $accent;
+        padding: 0px;
+
+        &.normal { background: $success; }
+        &.warning { background: $warning; }
+        &.danger { background: $danger; }
+    }
+
+    & .chart {
+        background: $inspector;
+        border-color: $line-soft;
+        border-width: $hairline;
+        color: $accent;
+        padding: 1su;
+        margin: 2su;
+    }
+
+    & .actions { padding: 2su; }
+
+    & .section {
+        background: $data;
+        border-color: $line-soft;
+        border-width: $hairline;
+        border-radius: 0px;
+        padding: 0px;
+        margin: 2su;
+    }
+
+    & .section-heading {
+        background: $data-heading;
+        padding: 1su;
+    }
+
+    & .property {
+        background: transparent;
+        padding: 2su;
+        transition-duration: 80ms;
+
+        &:hover { background: $data-hover; }
+    }
+
+    & .property-value {
+        color: $text;
+        font-size: $body-size;
+    }
+
+    & .notice {
+        background: $notice;
+        border-color: $notice-border;
+        border-width: $hairline;
+        border-radius: 0px;
+        padding: 2su;
+        margin: 2su;
+    }
+
+    & .notice-text {
+        color: #aab6b0;
+        font-size: $caption-size;
+    }
+
+    & .statusbar {
+        background: $chrome;
+        padding: 1su;
+    }
+}

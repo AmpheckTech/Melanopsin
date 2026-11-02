@@ -48,6 +48,7 @@ internal static class ResourcePackReader {
         var totalValues = 0;
         long totalBlobBytes = 0;
         long totalDecodedBytes = 0;
+        long totalTextBytes = 0;
         for (var resourceIndex = 0;
              resourceIndex < resourceCount;
              resourceIndex++) {
@@ -58,7 +59,8 @@ internal static class ResourcePackReader {
                 values,
                 ref totalValues,
                 ref totalBlobBytes,
-                ref totalDecodedBytes);
+                ref totalDecodedBytes,
+                ref totalTextBytes);
         }
 
         if (reader.BaseStream.ReadByte() != -1) {
@@ -76,8 +78,9 @@ internal static class ResourcePackReader {
         List<ResourcePackValue> values,
         ref int totalValues,
         ref long totalBlobBytes,
-        ref long totalDecodedBytes) {
-        var id = ReadText(reader, "resource id");
+        ref long totalDecodedBytes,
+        ref long totalTextBytes) {
+        var id = ReadText(reader, "resource id", ref totalTextBytes);
         if (string.IsNullOrWhiteSpace(id)) {
             throw new InvalidDataException(
                 "The resource pack contains an empty resource id.");
@@ -109,7 +112,10 @@ internal static class ResourcePackReader {
 
         var seenVariants = new HashSet<ResourceVariant>();
         for (var valueIndex = 0; valueIndex < valueCount; valueIndex++) {
-            var variant = ReadVariant(reader, descriptor);
+            var variant = ReadVariant(
+                reader,
+                descriptor,
+                ref totalTextBytes);
             if (!seenVariants.Add(variant)) {
                 throw new InvalidDataException(
                     $"Resource id '{id}' contains a duplicate variant.");
@@ -127,6 +133,22 @@ internal static class ResourcePackReader {
                     "The resource pack exceeds the total encoded data budget.");
             }
 
+            var decodedUpperBound =
+                ResourcePackCodec.EstimateDecodedBytesUpperBound(
+                    descriptor.Kind,
+                    blobLength);
+            if (decodedUpperBound >
+                ResourcePackFormat.MaxTotalDecodedBytes - totalDecodedBytes) {
+                throw new InvalidDataException(
+                    "The resource pack exceeds the total decoded data budget.");
+            }
+
+            if (checked(totalValues + 1) >
+                ResourcePackFormat.MaxTotalValues) {
+                throw new InvalidDataException(
+                    "The resource pack contains too many total values.");
+            }
+
             var blob = reader.ReadBytes(checked((int)blobLength));
             if (blob.Length != blobLength) {
                 throw new EndOfStreamException(
@@ -141,7 +163,7 @@ internal static class ResourcePackReader {
             }
 
             totalBlobBytes += blobLength;
-            var decodedBytes = EstimateDecodedBytes(value);
+            var decodedBytes = ResourcePackCodec.EstimateDecodedBytes(value);
             if (checked(totalDecodedBytes + decodedBytes) >
                 ResourcePackFormat.MaxTotalDecodedBytes) {
                 throw new InvalidDataException(
@@ -149,29 +171,15 @@ internal static class ResourcePackReader {
             }
 
             totalDecodedBytes += decodedBytes;
-            if (checked(totalValues + 1) > ResourcePackFormat.MaxTotalValues) {
-                throw new InvalidDataException(
-                    "The resource pack contains too many total values.");
-            }
-
             values.Add(new ResourcePackValue(id, variant, value));
             totalValues++;
         }
     }
 
-    private static long EstimateDecodedBytes(object value) {
-        return value switch {
-            string text => Encoding.UTF8.GetByteCount(text),
-            ImageResource image => image.Data.Length,
-            FontFace font => font.Data.Length,
-            byte[] data => data.Length,
-            _ => 0,
-        };
-    }
-
     private static ResourceVariant ReadVariant(
         BinaryReader reader,
-        ResourceDescriptor descriptor) {
+        ResourceDescriptor descriptor,
+        ref long totalTextBytes) {
         var flags = (ResourceVariantKinds)reader.ReadByte();
         if ((flags & ~descriptor.Variants) != 0 ||
             (flags & ResourceVariantKinds.None) != 0) {
@@ -180,13 +188,25 @@ internal static class ResourcePackReader {
         }
 
         var culture = (flags & ResourceVariantKinds.Culture) != 0
-            ? ReadVariantText(reader, descriptor, "culture")
+            ? ReadVariantText(
+                reader,
+                descriptor,
+                "culture",
+                ref totalTextBytes)
             : null;
         var theme = (flags & ResourceVariantKinds.Theme) != 0
-            ? ReadVariantText(reader, descriptor, "theme")
+            ? ReadVariantText(
+                reader,
+                descriptor,
+                "theme",
+                ref totalTextBytes)
             : null;
         var style = (flags & ResourceVariantKinds.Style) != 0
-            ? ReadVariantText(reader, descriptor, "style")
+            ? ReadVariantText(
+                reader,
+                descriptor,
+                "style",
+                ref totalTextBytes)
             : null;
         var displayScale = (flags & ResourceVariantKinds.DisplayScale) != 0
             ? reader.ReadSingle()
@@ -206,11 +226,19 @@ internal static class ResourcePackReader {
 
     private static string ReadText(
         BinaryReader reader,
-        string fieldName) {
+        string fieldName,
+        ref long totalTextBytes) {
         var length = reader.ReadUInt32();
         if (length > ResourcePackFormat.MaxTextBytes) {
             throw new InvalidDataException(
                 $"The resource pack {fieldName} is too long.");
+        }
+
+        var memoryBytes = checked((long)length * sizeof(char));
+        if (memoryBytes >
+            ResourcePackFormat.MaxTotalTextBytes - totalTextBytes) {
+            throw new InvalidDataException(
+                "The resource pack exceeds the total text metadata budget.");
         }
 
         var bytes = reader.ReadBytes(checked((int)length));
@@ -220,7 +248,9 @@ internal static class ResourcePackReader {
         }
 
         try {
-            return StrictUtf8.GetString(bytes);
+            var text = StrictUtf8.GetString(bytes);
+            totalTextBytes += memoryBytes;
+            return text;
         } catch (DecoderFallbackException exception) {
             throw new InvalidDataException(
                 $"The resource pack {fieldName} is not valid UTF-8.",
@@ -231,8 +261,9 @@ internal static class ResourcePackReader {
     private static string ReadVariantText(
         BinaryReader reader,
         ResourceDescriptor descriptor,
-        string fieldName) {
-        var value = ReadText(reader, fieldName);
+        string fieldName,
+        ref long totalTextBytes) {
+        var value = ReadText(reader, fieldName, ref totalTextBytes);
         if (string.IsNullOrWhiteSpace(value)) {
             throw new InvalidDataException(
                 $"Resource id '{descriptor.Id}' contains an empty " +

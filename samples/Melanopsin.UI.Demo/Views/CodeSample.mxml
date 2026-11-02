@@ -1,0 +1,155 @@
+<LinearLayout
+  package="Melanopsin.UI.Demo.Views"
+  component="CodeSample"
+  class="code-sample"
+  orientation="vertical"
+  spacing="0px"
+  width="100%">
+  <FlexLayout
+    class="page-intro"
+    direction="row"
+    align-items="end"
+    justify-content="space-between"
+    column-gap="4su"
+    width="100%"
+    height="18su"
+    flex-shrink="0">
+    <FlexLayout
+      class="intro-copy"
+      direction="column"
+      justify-content="end"
+      row-gap="0.6su"
+      width="0px"
+      height="100%"
+      flex-grow="1"
+      flex-shrink="1">
+      <TextBlock class="eyebrow" text="Markup" wrap="false" />
+      <TextBlock class="page-title" text="Code in markup" wrap="false" />
+      <TextBlock
+        class="page-summary"
+        text="This page has no code-behind file. Its state, properties and handlers are declared in a single @code block."
+        wrap="false" />
+    </FlexLayout>
+    <FlexLayout
+      class="run-info"
+      direction="column"
+      justify-content="end"
+      align-items="end"
+      row-gap="0.8su"
+      width="27su"
+      height="100%"
+      flex-shrink="0">
+      <TextBlock class="run-status" text="View only" wrap="false" />
+      <TextBlock class="run-note" text="No C# beside it" wrap="false" />
+    </FlexLayout>
+  </FlexLayout>
+
+  <LinearLayout class="sample" orientation="vertical" spacing="2su" width="100%">
+    <FlexLayout
+      class="code-stage"
+      direction="row"
+      column-gap="2su"
+      width="100%">
+      <LinearLayout
+        class="code-step-list"
+        orientation="vertical"
+        spacing="1su"
+        width="0px"
+        height="34su"
+        flex-grow="1">
+        <TextBlock class="detail-title" text="Declared in the block" wrap="false" />
+        @for (step of Steps; track step.Title) {
+          <Button
+            class="{{ StepClass(step) }}"
+            text="{{ step.Title }}"
+            width="100%"
+            height="6su"
+            onClicked="SelectStep(step)" />
+        }
+      </LinearLayout>
+
+      <LinearLayout
+        class="code-readout"
+        orientation="vertical"
+        spacing="1su"
+        width="0px"
+        height="34su"
+        flex-grow="1">
+        <TextBlock class="code-progress" text="{{ ProgressText }}" wrap="false" />
+        <TextBlock class="code-readout-title" text="{{ SelectedTitle }}" wrap="false" />
+        <TextBlock class="code-readout-copy" text="{{ SelectedDetail }}" width="100%" />
+        <FlexLayout
+          direction="row"
+          align-items="end"
+          column-gap="1su"
+          width="100%"
+          height="0px"
+          weight="1">
+          <Button
+            class="quiet-action"
+            text="Previous"
+            width="0px"
+            height="6su"
+            flex-grow="1"
+            onClicked="PreviousStep()" />
+          <Button
+            class="quiet-action"
+            text="Next"
+            width="0px"
+            height="6su"
+            flex-grow="1"
+            onClicked="NextStep()" />
+        </FlexLayout>
+      </LinearLayout>
+    </FlexLayout>
+
+    <LinearLayout class="detail" orientation="vertical" spacing="0.8su" width="100%">
+      <TextBlock class="detail-title" text="What the generator does" wrap="false" />
+      <TextBlock
+        class="detail-copy"
+        text="The leading using directives move to file scope, the remaining body is emitted verbatim into the component class, and #line keeps every diagnostic pointed at this .mxml."
+        width="100%" />
+    </LinearLayout>
+  </LinearLayout>
+
+  @code {
+    using System;
+    using System.Collections.Generic;
+
+    public sealed record Step(string Title, string Detail);
+
+    private static readonly Step[] StepTable = [
+        new(
+            "Fields",
+            "Private fields and readonly tables are ordinary class members. Nothing is generated for you except the class itself."),
+        new(
+            "Properties",
+            "Bindings such as {{ ProgressText }} read these properties while the tree is built, so any state change rebuilds the page."),
+        new(
+            "Handlers",
+            "onClicked runs the statement against this class. SelectStep(step) captures the loop variable from the @for above."),
+        new(
+            "Diagnostics",
+            "A typo in this block is reported at the matching line and column of this file, not at an intermediate file."),
+    ];
+
+    private int _selected;
+
+    public IReadOnlyList<Step> Steps => StepTable;
+
+    public string ProgressText => $"{_selected + 1} of {StepTable.Length}";
+
+    public string SelectedTitle => StepTable[_selected].Title;
+
+    public string SelectedDetail => StepTable[_selected].Detail;
+
+    public string StepClass(Step step) =>
+        step == StepTable[_selected] ? "code-step selected" : "code-step";
+
+    public void SelectStep(Step step) => _selected = Array.IndexOf(StepTable, step);
+
+    public void NextStep() => _selected = (_selected + 1) % StepTable.Length;
+
+    public void PreviousStep() => _selected = (_selected + StepTable.Length - 1) % StepTable.Length;
+  }
+</LinearLayout>

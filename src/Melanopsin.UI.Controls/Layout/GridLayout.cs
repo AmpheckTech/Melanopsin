@@ -5,7 +5,7 @@ using Melanopsin.UI.Styling;
 namespace Melanopsin.UI.Controls;
 
 [MarkupElement]
-public sealed class GridLayout :
+public sealed partial class GridLayout :
     Control,
     ILayoutParticipant,
     ILayoutViewportDependency,
@@ -28,10 +28,10 @@ public sealed class GridLayout :
     public int Rows { get; private set; }
 
     [MarkupAttribute("column-gap", MarkupValueKind.Length)]
-    public Length ColumnGap { get; private set; } = Length.Space(1);
+    public Length ColumnGap { get; private set; } = Length.Su(1);
 
     [MarkupAttribute("row-gap", MarkupValueKind.Length)]
-    public Length RowGap { get; private set; } = Length.Space(1);
+    public Length RowGap { get; private set; } = Length.Su(1);
 
     bool ILayoutViewportDependency.UsesViewportUnits =>
         ColumnGap.UsesViewportUnits || RowGap.UsesViewportUnits;
@@ -43,25 +43,25 @@ public sealed class GridLayout :
         base.OnSetAttribute(name, value);
         switch (name) {
             case "columns":
-                SetColumns(Math.Max(1, ControlValueParser.ReadInteger(value) ?? Columns));
+                SetColumns(Math.Max(1, value is int columns ? columns : Columns));
                 break;
             case "rows":
-                SetRows(Math.Max(0, ControlValueParser.ReadInteger(value) ?? Rows));
+                SetRows(Math.Max(0, value is int rows ? rows : Rows));
                 break;
             case "column-gap":
-                if (Length.TryParse(value?.ToString(), out var columnGap)) {
+                if (value is Length columnGap) {
                     ColumnGap = columnGap;
                 }
 
                 break;
             case "row-gap":
-                if (Length.TryParse(value?.ToString(), out var rowGap)) {
+                if (value is Length rowGap) {
                     RowGap = rowGap;
                 }
 
                 break;
             case "align-items":
-                AlignItems = ControlValueParser.ReadLayoutAlignment(value, AlignItems);
+                AlignItems = value is LayoutAlignment alignItems ? alignItems : AlignItems;
                 break;
         }
     }
@@ -105,277 +105,6 @@ public sealed class GridLayout :
     protected internal override void OnChildRemoved(Node child) {
         _explicitPlacements.Remove(child);
         base.OnChildRemoved(child);
-    }
-
-    LayoutSize ILayoutParticipant.Measure(
-        LayoutMeasureContext context,
-        LayoutConstraints constraints) {
-        var style = context.GetStyle(this);
-        var widthFallback = constraints.HasBoundedWidth
-            ? constraints.MaxWidth
-            : MeasureIntrinsicCore(
-                context,
-                LayoutAxis.Horizontal,
-                LayoutIntrinsicMode.Maximum,
-                constraints.HasBoundedHeight
-                    ? constraints.MaxHeight
-                    : float.PositiveInfinity);
-        var contentWidth = context.ResolveWidth(style, constraints, widthFallback);
-        var width = constraints.ConstrainWidth(contentWidth + (style.Margin * 2));
-        var childConstraint = LayoutConstraints.Loose(
-            Math.Max(
-                0,
-                width - (style.Padding * 2) - (style.Margin * 2)),
-            constraints.HasBoundedHeight
-                ? Math.Max(0, constraints.MaxHeight - (style.Padding * 2))
-                : float.PositiveInfinity);
-        var childrenHeight = MeasureChildren(
-            context,
-            childConstraint,
-            style.Padding);
-        var fallbackHeight = Math.Max(
-            context.Metrics.Space(8),
-            childrenHeight);
-        var height = context.ResolveHeight(style, constraints, fallbackHeight);
-        height = constraints.ConstrainHeight(height + (style.Margin * 2));
-        return new LayoutSize(width, height);
-    }
-
-    void ILayoutParticipant.Arrange(
-        LayoutArrangeContext context,
-        Rect bounds) {
-        var content = context.ContentBounds;
-        var members = context.GetVisibleChildren(this);
-        if (members.Count == 0) {
-            return;
-        }
-
-        var columns = Math.Max(1, Columns);
-        var columnGap = ResolveGap(ColumnGap, context);
-        var rowGap = ResolveGap(RowGap, context);
-        var columnWidth = Math.Max(
-            0,
-            (content.Width - (columnGap * (columns - 1))) / columns);
-        var placements = new List<(
-            Node Child,
-            ResolvedStyle Style,
-            int Row,
-            int Column,
-            int RowSpan,
-            int ColumnSpan,
-            LayoutSize Measured)>(members.Count);
-        var rowHeights = new Dictionary<int, float>();
-        long nextAutoIndex = 0;
-        long maxRow = -1;
-
-        foreach (var child in members) {
-            var style = context.GetStyle(child);
-            var placement = ResolvePlacement(
-                child,
-                style,
-                ref nextAutoIndex,
-                columns);
-            var cellWidth = (columnWidth * placement.ColumnSpan) +
-                (columnGap * (placement.ColumnSpan - 1));
-            var measured = context.Measure(
-                child,
-                LayoutConstraints.Loose(cellWidth, content.Height));
-            placements.Add((
-                child,
-                style,
-                placement.Row,
-                placement.Column,
-                placement.RowSpan,
-                placement.ColumnSpan,
-                measured));
-            rowHeights[placement.Row] = Math.Max(
-                rowHeights.GetValueOrDefault(placement.Row),
-                measured.Height);
-            maxRow = Math.Max(
-                maxRow,
-                (long)placement.Row + placement.RowSpan - 1);
-        }
-
-        var rowCount = Rows > 0 ? Rows : checked((int)(maxRow + 1));
-        EnsureGridSize(columns, rowCount);
-        var rowHeight = Rows > 0 && rowCount > 0
-            ? Math.Max(0, (content.Height - (rowGap * (rowCount - 1))) / rowCount)
-            : 0;
-        var rowOffsets = new float[checked(rowCount + 1)];
-        for (var row = 0; row < rowCount; row++) {
-            var height = rowHeight > 0
-                ? rowHeight
-                : rowHeights.GetValueOrDefault(row, context.Metrics.Space(8));
-            rowOffsets[row + 1] = rowOffsets[row] + height + rowGap;
-        }
-
-        foreach (var placement in placements) {
-            var cellWidth = (columnWidth * placement.ColumnSpan) +
-                (columnGap * (placement.ColumnSpan - 1));
-            var rowEnd = checked(placement.Row + placement.RowSpan);
-            var cellHeight = rowOffsets[Math.Min(rowCount, rowEnd)] -
-                rowOffsets[Math.Min(rowCount, placement.Row)] -
-                rowGap;
-            var cellX = content.X + (placement.Column * (columnWidth + columnGap));
-            var cellY = content.Y + rowOffsets[Math.Min(rowCount, placement.Row)];
-            var availableWidth = Math.Max(
-                0,
-                cellWidth - (placement.Style.Margin * 2));
-            var availableHeight = Math.Max(
-                0,
-                cellHeight - (placement.Style.Margin * 2));
-            var childWidth = Math.Min(
-                availableWidth,
-                Math.Max(0, placement.Measured.Width - (placement.Style.Margin * 2)));
-            var childHeight = Math.Min(
-                availableHeight,
-                Math.Max(0, placement.Measured.Height - (placement.Style.Margin * 2)));
-            var alignment = placement.Style.AlignSelf == LayoutAlignment.Auto
-                ? AlignItems
-                : placement.Style.AlignSelf;
-            if (alignment == LayoutAlignment.Stretch) {
-                childWidth = availableWidth;
-                childHeight = availableHeight;
-            }
-
-            var x = AlignInCell(
-                cellX,
-                cellWidth,
-                childWidth,
-                placement.Style.Margin,
-                alignment,
-                placement.Style.Anchor,
-                horizontal: true);
-            var y = AlignInCell(
-                cellY,
-                cellHeight,
-                childHeight,
-                placement.Style.Margin,
-                alignment,
-                placement.Style.Anchor,
-                horizontal: false);
-            context.ArrangeChild(
-                placement.Child,
-                new Rect(x, y, childWidth, childHeight));
-        }
-    }
-
-    float ILayoutIntrinsicProvider.MeasureIntrinsic(
-        LayoutMeasureContext context,
-        LayoutAxis axis,
-        LayoutIntrinsicMode mode,
-        float crossAxisExtent) {
-        return MeasureIntrinsicCore(context, axis, mode, crossAxisExtent);
-    }
-
-    private float MeasureChildren(
-        LayoutMeasureContext context,
-        LayoutConstraints constraint,
-        float padding) {
-        var children = context.GetVisibleChildren(this);
-        if (children.Count == 0) {
-            return 0;
-        }
-
-        var columns = Math.Max(1, Columns);
-        var columnGap = ResolveGap(ColumnGap, context);
-        var rowGap = ResolveGap(RowGap, context);
-        var columnWidth = Math.Max(
-            0,
-            (constraint.MaxWidth - (columnGap * (columns - 1))) / columns);
-        var rowHeights = new Dictionary<int, float>();
-        long nextAutoIndex = 0;
-        var maxRow = -1;
-
-        foreach (var child in children) {
-            var style = context.GetStyle(child);
-            var placement = ResolvePlacement(
-                child,
-                style,
-                ref nextAutoIndex,
-                columns);
-            var childConstraint = LayoutConstraints.Loose(
-                Math.Min(
-                    constraint.MaxWidth,
-                    (columnWidth * placement.ColumnSpan) +
-                    (columnGap * (placement.ColumnSpan - 1))),
-                constraint.MaxHeight);
-            var measured = context.Measure(child, childConstraint);
-            rowHeights[placement.Row] = Math.Max(
-                rowHeights.GetValueOrDefault(placement.Row),
-                measured.Height);
-            maxRow = Math.Max(
-                maxRow,
-                checked(placement.Row + placement.RowSpan - 1));
-        }
-
-        var height = 0f;
-        EnsureGridSize(columns, checked(maxRow + 1));
-        for (var row = 0; row <= maxRow; row++) {
-            height += rowHeights.GetValueOrDefault(row, context.Metrics.Space(8));
-            if (row < maxRow) {
-                height += rowGap;
-            }
-        }
-
-        return height + (padding * 2);
-    }
-
-    private float MeasureIntrinsicCore(
-        LayoutMeasureContext context,
-        LayoutAxis axis,
-        LayoutIntrinsicMode mode,
-        float crossAxisExtent) {
-        var style = context.GetStyle(this);
-        var children = context.GetVisibleChildren(this);
-        var columns = Math.Max(1, Columns);
-        var horizontal = axis == LayoutAxis.Horizontal;
-        var gap = horizontal
-            ? ResolveGap(ColumnGap, context)
-            : ResolveGap(RowGap, context);
-        if (children.Count == 0) {
-            return style.Padding * 2;
-        }
-
-        var trackExtents = new Dictionary<int, float>();
-        long nextAutoIndex = 0;
-        var maxTrack = -1;
-
-        foreach (var child in children) {
-            var childStyle = context.GetStyle(child);
-            var placement = ResolvePlacement(
-                child,
-                childStyle,
-                ref nextAutoIndex,
-                columns);
-            var start = horizontal ? placement.Column : placement.Row;
-            var span = horizontal
-                ? placement.ColumnSpan
-                : placement.RowSpan;
-            var extent = context.MeasureIntrinsic(
-                child,
-                axis,
-                mode,
-                crossAxisExtent);
-            var distributed = Math.Max(
-                0,
-                (extent - (gap * (span - 1))) / span);
-            for (var track = start; track < checked(start + span); track++) {
-                trackExtents[track] = Math.Max(
-                    trackExtents.GetValueOrDefault(track),
-                    distributed);
-            }
-
-            maxTrack = Math.Max(maxTrack, checked(start + span - 1));
-        }
-
-        var total = 0f;
-        for (var track = 0; track <= maxTrack; track++) {
-            total += trackExtents.GetValueOrDefault(track);
-        }
-
-        total += gap * maxTrack;
-        return total + (style.Padding * 2);
     }
 
     private GridChildPlacement ResolvePlacement(
@@ -548,24 +277,6 @@ public sealed class GridLayout :
         }
     }
 
-    private static float ResolveGap(
-        Length gap,
-        LayoutMeasureContext context) {
-        return gap.Resolve(
-            context.Metrics,
-            available: 0,
-            fallback: context.Metrics.Space(1));
-    }
-
-    private static float ResolveGap(
-        Length gap,
-        LayoutArrangeContext context) {
-        return gap.Resolve(
-            context.Metrics,
-            available: 0,
-            fallback: context.Metrics.Space(1));
-    }
-
     private static float AlignInCell(
         float start,
         float size,
@@ -583,36 +294,16 @@ public sealed class GridLayout :
         }
 
         return horizontal
-            ? AlignX(new Rect(start, start, size, size), childSize, anchor, margin)
-            : AlignY(new Rect(start, start, size, size), childSize, anchor, margin);
-    }
-
-    private static float AlignX(
-        Rect content,
-        float width,
-        Anchor anchor,
-        float margin) {
-        return anchor switch {
-            Anchor.Top or Anchor.Center or Anchor.Bottom =>
-                content.X + ((content.Width - width) / 2),
-            Anchor.TopRight or Anchor.Right or Anchor.BottomRight =>
-                content.Right - width - margin,
-            _ => content.X + margin,
-        };
-    }
-
-    private static float AlignY(
-        Rect content,
-        float height,
-        Anchor anchor,
-        float margin) {
-        return anchor switch {
-            Anchor.Left or Anchor.Center or Anchor.Right =>
-                content.Y + ((content.Height - height) / 2),
-            Anchor.BottomLeft or Anchor.Bottom or Anchor.BottomRight =>
-                content.Bottom - height - margin,
-            _ => content.Y + margin,
-        };
+            ? LayoutMath.AlignX(
+                new Rect(start, start, size, size),
+                childSize,
+                anchor,
+                margin)
+            : LayoutMath.AlignY(
+                new Rect(start, start, size, size),
+                childSize,
+                anchor,
+                margin);
     }
 
 }

@@ -20,7 +20,8 @@ public sealed class FontFace : ITextMeasurer {
         int hmtxOffset,
         int horizontalMetricCount,
         CmapLookup cmap,
-        int faceIndex) {
+        int faceIndex,
+        bool hasColorGlyphs) {
         _data = data.AsMemory();
         SourceName = sourceName;
         FamilyName = familyName;
@@ -31,6 +32,7 @@ public sealed class FontFace : ITextMeasurer {
         _horizontalMetricCount = horizontalMetricCount;
         _cmap = cmap;
         FaceIndex = faceIndex;
+        HasColorGlyphs = hasColorGlyphs;
     }
 
     public string? SourceName { get; }
@@ -43,17 +45,41 @@ public sealed class FontFace : ITextMeasurer {
 
     public int FaceIndex { get; }
 
+    /// <summary>
+    /// True when the face stores colour glyphs through COLR/CPAL, CBDT/CBLC,
+    /// sbix or SVG, so emoji sequences can be drawn in colour.
+    /// </summary>
+    public bool HasColorGlyphs { get; }
+
     public ReadOnlyMemory<byte> Data => _data;
 
     public static FontFace Load(string path, int faceIndex = 0) {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        return Parse(File.ReadAllBytes(path), path, faceIndex);
+        using var stream = new FileStream(
+            path,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read);
+        if (stream.Length > OpenTypeLimits.MaximumFontBytes) {
+            throw new InvalidDataException(
+                $"Font data from '{path}' exceeds the supported size limit.");
+        }
+
+        var data = new byte[checked((int)stream.Length)];
+        stream.ReadExactly(data);
+        return Parse(data, path, faceIndex);
     }
 
     public static FontFace Parse(
         ReadOnlySpan<byte> data,
         string? sourceName = null,
         int faceIndex = 0) {
+        if (data.Length > OpenTypeLimits.MaximumFontBytes) {
+            throw new InvalidDataException(
+                $"Font data from '{sourceName ?? "the provided buffer"}' " +
+                "exceeds the supported size limit.");
+        }
+
         try {
             return OpenTypeFontParser.Parse(data.ToArray(), sourceName, faceIndex);
         } catch (InvalidDataException exception) {

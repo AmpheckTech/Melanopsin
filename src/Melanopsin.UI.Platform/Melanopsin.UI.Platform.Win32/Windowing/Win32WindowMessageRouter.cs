@@ -9,12 +9,15 @@ internal sealed class Win32WindowMessageRouter {
     private readonly Win32WindowRegistry _windows;
     private readonly Win32WindowEventQueue _events;
     private readonly Win32PointerRouter _pointer;
+    private readonly Action<float>? _displayScaleChanged;
 
     public Win32WindowMessageRouter(
         Win32WindowRegistry windows,
-        Win32WindowEventQueue events) {
+        Win32WindowEventQueue events,
+        Action<float>? displayScaleChanged = null) {
         _windows = windows;
         _events = events;
+        _displayScaleChanged = displayScaleChanged;
         _pointer = new Win32PointerRouter(windows, events);
     }
 
@@ -189,6 +192,8 @@ internal sealed class Win32WindowMessageRouter {
             return;
         }
 
+        var displayScale = dpi / 96f;
+        _displayScaleChanged?.Invoke(displayScale);
         _events.QueueDpiChanged(window, dpi);
     }
 }

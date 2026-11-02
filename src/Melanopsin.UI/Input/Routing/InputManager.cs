@@ -34,8 +34,11 @@ public sealed class InputManager {
         return _hoverTargets.TryGetValue(key, out target);
     }
 
-    public bool Process(PointerInputEvent input) {
+    public bool Process(PointerInputEvent input) => Process(input, out _);
+
+    internal bool Process(PointerInputEvent input, out bool preventDefaultFocus) {
         ArgumentNullException.ThrowIfNull(input);
+        preventDefaultFocus = false;
         var key = new PointerCaptureKey(input.WindowId, input.Device, input.PointerId);
         var hasCapture = _captures.TryGetValue(key, out var capture);
         if (!_windows.ContainsWindow(input.WindowId)) {
@@ -46,7 +49,7 @@ public sealed class InputManager {
             input.Phase == PointerPhase.Leave &&
             !hasCapture) {
             if (_hoverTargets.Remove(key, out var leavingTarget)) {
-                leavingTarget.Node.IsHovered = false;
+                UpdateHoverRoute(leavingTarget, current: null);
                 return Dispatch(input, leavingTarget);
             }
 
@@ -60,7 +63,7 @@ public sealed class InputManager {
             if (input.Device == InputDeviceKind.Mouse &&
                 !hasCapture &&
                 _hoverTargets.Remove(key, out var leavingTarget)) {
-                leavingTarget.Node.IsHovered = false;
+                UpdateHoverRoute(leavingTarget, current: null);
                 Dispatch(input.WithPhase(PointerPhase.Leave), leavingTarget);
             }
 
@@ -76,14 +79,13 @@ public sealed class InputManager {
             _hoverTargets.TryGetValue(key, out var previousHover);
             if (previousHover?.Node != target.Node) {
                 dispatched = true;
+                UpdateHoverRoute(previousHover, target);
                 if (previousHover is not null) {
-                    previousHover.Node.IsHovered = false;
                     dispatched |= Dispatch(
                         input.WithPhase(PointerPhase.Leave),
                         previousHover);
                 }
 
-                target.Node.IsHovered = true;
                 dispatched |= Dispatch(input.WithPhase(PointerPhase.Enter), target);
             }
 
@@ -102,7 +104,7 @@ public sealed class InputManager {
         }
 
         if (input.Phase != PointerPhase.Enter) {
-            dispatched |= Dispatch(input, target);
+            dispatched |= Dispatch(input, target, out preventDefaultFocus);
         }
 
         if (input.Phase == PointerPhase.Up) {
@@ -118,7 +120,7 @@ public sealed class InputManager {
             _captures.Remove(key);
         } else if (input.Phase == PointerPhase.Cancel) {
             if (_hoverTargets.Remove(key, out var canceledHover)) {
-                canceledHover.Node.IsHovered = false;
+                UpdateHoverRoute(canceledHover, current: null);
             }
 
             _captures.Remove(key);
@@ -150,13 +152,56 @@ public sealed class InputManager {
 
         var hoverKey = new PointerCaptureKey(windowId, InputDeviceKind.Mouse, new PointerId(1));
         if (_hoverTargets.Remove(hoverKey, out var hoverTarget)) {
-            hoverTarget.Node.IsHovered = false;
+            UpdateHoverRoute(hoverTarget, current: null);
         }
     }
 
+    private static void UpdateHoverRoute(
+        WindowHitTarget? previous,
+        WindowHitTarget? current) {
+        if (previous is not null) {
+            foreach (var node in previous.Route) {
+                if (!Contains(current, node)) {
+                    node.IsHovered = false;
+                }
+            }
+        }
+
+        if (current is not null) {
+            foreach (var node in current.Route) {
+                if (!Contains(previous, node)) {
+                    node.IsHovered = true;
+                }
+            }
+        }
+    }
+
+    private static bool Contains(WindowHitTarget? target, Node node) {
+        if (target is null) {
+            return false;
+        }
+
+        foreach (var candidate in target.Route) {
+            if (ReferenceEquals(candidate, node)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private bool Dispatch(PointerInputEvent input, WindowHitTarget target) {
+        return Dispatch(input, target, out _);
+    }
+
+    private bool Dispatch(
+        PointerInputEvent input,
+        WindowHitTarget target,
+        out bool preventDefaultFocus) {
         var routedEvent = new RoutedInputEvent(input, target);
+        preventDefaultFocus = false;
         PointerRouted?.Invoke(routedEvent);
+        preventDefaultFocus |= routedEvent.PreventDefaultFocus;
         var dispatched = false;
         for (var index = target.Route.Count - 1; index >= 0; index--) {
             var currentTarget = target.Route[index];
@@ -168,6 +213,7 @@ public sealed class InputManager {
             }
 
             handler.Handle(routedEvent);
+            preventDefaultFocus |= routedEvent.PreventDefaultFocus;
             if (routedEvent.Handled) {
                 break;
             }

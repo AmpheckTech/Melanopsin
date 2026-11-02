@@ -86,6 +86,19 @@ internal sealed class HitRegionCollector {
             Collect(child, hitRegions);
         }
 
+        if (layoutNode.Node is IAdditionalHitRegionProvider additionalRegions) {
+            var route = BuildRoute(layoutNode);
+            var bounds = new List<Rect>(2);
+            additionalRegions.AppendHitRegionBounds(bounds);
+            foreach (var hitBounds in bounds) {
+                hitRegions.Add(new HitRegion(
+                    layoutNode.Node,
+                    hitBounds,
+                    route,
+                    layoutNode.ClipBounds));
+            }
+        }
+
         if (layoutNode.Node.IsRelayoutBoundary) {
             layoutNode.CachedHitRegions = hitRegions
                 .GetRange(startIndex, hitRegions.Count - startIndex)

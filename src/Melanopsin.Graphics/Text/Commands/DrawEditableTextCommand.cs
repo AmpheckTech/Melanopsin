@@ -1,6 +1,6 @@
 using Melanopsin.Graphics;
-using Melanopsin.Graphics.Text.Fonts;
 using Melanopsin.Graphics.Rendering;
+using Melanopsin.Graphics.Text.Fonts;
 
 namespace Melanopsin.Graphics.Text;
 

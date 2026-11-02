@@ -7,10 +7,10 @@ namespace Melanopsin.UI.Markup.Compiler.Parsing;
 
 internal static class MarkupSchema {
     internal const string Namespace = "https://melanopsin.dev/schema";
-    internal const string ReferenceAttributeName = "Ref";
+    internal const string ReferenceAttributeName = "ref";
 
     private static readonly string[] MetadataAttributes =
-        ["package", "class", "resources"];
+        ["package", "component", "resources"];
 
     internal static bool IsElement(XElement element, string localName) {
         return element.Name.NamespaceName == Namespace &&
@@ -22,8 +22,15 @@ internal static class MarkupSchema {
     }
 
     internal static bool IsMetadataAttribute(XAttribute attribute) {
-        return IsAttribute(attribute) &&
+        return attribute.Name.NamespaceName.Length == 0 &&
                MetadataAttributes.Contains(
+                   attribute.Name.LocalName,
+                   StringComparer.Ordinal);
+    }
+
+    internal static bool IsLegacyMetadataAttribute(XAttribute attribute) {
+        return IsAttribute(attribute) &&
+               MetadataAttributes.Append("class").Contains(
                    attribute.Name.LocalName,
                    StringComparer.Ordinal);
     }

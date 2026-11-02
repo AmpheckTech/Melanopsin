@@ -14,10 +14,11 @@ internal static class MarkupResourceValidator {
         ControlCatalog controls,
         ResourceManifestCatalog manifests) {
         var diagnostics = new List<MarkupDiagnostic>();
+        var resolver = new MarkupControlResolver(document, controls);
         var resources = new MarkupResourceResolver(manifests);
         var resourcePackage = document.ResourcePackage ?? document.Namespace;
         foreach (var node in document.Nodes) {
-            ValidateNode(node, controls, resources, resourcePackage, diagnostics);
+            ValidateNode(node, resolver, resources, resourcePackage, diagnostics);
         }
 
         return diagnostics;
@@ -25,15 +26,15 @@ internal static class MarkupResourceValidator {
 
     private static void ValidateNode(
         MarkupNode node,
-        ControlCatalog controls,
+        MarkupControlResolver resolver,
         MarkupResourceResolver resources,
         string? package,
         List<MarkupDiagnostic> diagnostics) {
         switch (node) {
             case MarkupElement element:
-                ValidateElement(element, controls, resources, package, diagnostics);
+                ValidateElement(element, resolver, resources, package, diagnostics);
                 foreach (var child in element.Children) {
-                    ValidateNode(child, controls, resources, package, diagnostics);
+                    ValidateNode(child, resolver, resources, package, diagnostics);
                 }
 
                 break;
@@ -41,28 +42,28 @@ internal static class MarkupResourceValidator {
             case MarkupIf conditional:
                 ValidateNodes(
                     conditional.WhenTrue,
-                    controls,
+                    resolver,
                     resources,
                     package,
                     diagnostics);
                 ValidateNodes(
                     conditional.WhenFalse,
-                    controls,
+                    resolver,
                     resources,
                     package,
                     diagnostics);
                 break;
 
             case MarkupFor loop:
-                ValidateNodes(loop.Body, controls, resources, package, diagnostics);
-                ValidateNodes(loop.EmptyBody, controls, resources, package, diagnostics);
+                ValidateNodes(loop.Body, resolver, resources, package, diagnostics);
+                ValidateNodes(loop.EmptyBody, resolver, resources, package, diagnostics);
                 break;
 
             case MarkupSwitch switchBlock:
                 foreach (var switchCase in switchBlock.Cases) {
                     ValidateNodes(
                         switchCase.Body,
-                        controls,
+                        resolver,
                         resources,
                         package,
                         diagnostics);
@@ -70,7 +71,7 @@ internal static class MarkupResourceValidator {
 
                 ValidateNodes(
                     switchBlock.DefaultBody,
-                    controls,
+                    resolver,
                     resources,
                     package,
                     diagnostics);
@@ -80,22 +81,22 @@ internal static class MarkupResourceValidator {
 
     private static void ValidateNodes(
         IReadOnlyList<MarkupNode> nodes,
-        ControlCatalog controls,
+        MarkupControlResolver resolver,
         MarkupResourceResolver resources,
         string? package,
         List<MarkupDiagnostic> diagnostics) {
         foreach (var node in nodes) {
-            ValidateNode(node, controls, resources, package, diagnostics);
+            ValidateNode(node, resolver, resources, package, diagnostics);
         }
     }
 
     private static void ValidateElement(
         MarkupElement element,
-        ControlCatalog controls,
+        MarkupControlResolver resolver,
         MarkupResourceResolver resources,
         string? package,
         List<MarkupDiagnostic> diagnostics) {
-        var control = controls.Find(element.Name);
+        var control = resolver.Find(element);
         foreach (var attribute in element.Attributes) {
             var resourceParts = attribute.Parts
                 .Where(static part => part.IsResource)
@@ -140,7 +141,7 @@ internal static class MarkupResourceValidator {
                 diagnostics.Add(Error(
                     MarkupDiagnosticCodes.IncompatibleResourceType,
                     $"Resource '{reference.Id}' cannot be assigned to " +
-                    $"{element.Name}.{attribute.Name}.",
+                    $"{element.QualifiedName}.{attribute.Name}.",
                     attribute));
             }
         }

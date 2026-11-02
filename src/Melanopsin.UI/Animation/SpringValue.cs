@@ -61,8 +61,8 @@ public sealed class SpringValue {
     /// Integrates the spring by a number of seconds.
     /// </summary>
     /// <returns>
-    /// <see langword="true"/> when the spring was not already at rest and an
-    /// integration step was performed; otherwise <see langword="false"/>.
+    /// <see langword="true"/> when a step was performed, <see langword="false"/>
+    /// when the spring was already at rest.
     /// </returns>
     public bool Advance(float deltaSeconds) {
         if (!float.IsFinite(deltaSeconds) || deltaSeconds < 0) {

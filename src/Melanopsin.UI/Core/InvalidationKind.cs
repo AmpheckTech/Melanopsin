@@ -10,4 +10,5 @@ public enum InvalidationKind {
     Layout = 2,
     LayoutAndPaint = Paint | Layout,
     Build = 4,
+    Style = 8,
 }

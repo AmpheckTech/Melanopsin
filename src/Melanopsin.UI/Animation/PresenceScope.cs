@@ -114,20 +114,16 @@ public sealed class PresenceScope : Fragment {
         var retained = new List<Node>(children.Count + _exiting.Count);
         retained.AddRange(children);
         foreach (var child in previous) {
-            var stillExiting = _exiting.ContainsKey(child);
             if (!incoming.Contains(child)) {
-                if (!stillExiting) {
-                    BeginExit(child, previousIndices[child]);
-                }
-
-                if (_exiting.ContainsKey(child)) {
+                var isExiting = _exiting.ContainsKey(child);
+                if (isExiting || BeginExit(child, previousIndices[child])) {
                     retained.Add(child);
                 }
 
                 continue;
             }
 
-            if (stillExiting) {
+            if (_exiting.ContainsKey(child)) {
                 CancelExit(child);
             }
         }
@@ -188,14 +184,15 @@ public sealed class PresenceScope : Fragment {
         node.SetState(UiStateNames.Entering, true);
     }
 
-    private void BeginExit(Node node, int oldIndex) {
+    private bool BeginExit(Node node, int oldIndex) {
         Raise(PresenceChangeKind.Exit, node, oldIndex, -1);
         if (ExitDuration.Milliseconds <= 0) {
-            return;
+            return false;
         }
 
         _exiting[node] = StartTimeline(ExitDuration);
         node.SetState(UiStateNames.Exiting, true);
+        return true;
     }
 
     private void BeginMove(Node node, int oldIndex, int newIndex) {

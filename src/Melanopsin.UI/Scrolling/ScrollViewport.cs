@@ -6,11 +6,13 @@ using Melanopsin.UI.Rendering;
 namespace Melanopsin.UI;
 
 [MarkupElement]
-public sealed class ScrollViewport :
+public sealed partial class ScrollViewport :
     Control,
     IInputHandler,
     ILayoutParticipant,
+    IAdditionalHitRegionProvider,
     ILayoutViewportDependency,
+    IOverlayRenderCommandProvider,
     IScrollTransform {
     private const float DragThreshold = 8;
 
@@ -19,6 +21,7 @@ public sealed class ScrollViewport :
     private float _candidateX;
     private float _candidateY;
     private bool _hasDragCandidate;
+    private Rect _contentBounds;
 
     public ScrollViewport()
         : base("ScrollViewport") {
@@ -60,7 +63,10 @@ public sealed class ScrollViewport :
     }
 
     internal bool AdvanceAnimation(float elapsedSeconds) {
-        if (!_scroll.Advance(elapsedSeconds)) {
+        var changed = _scroll.Advance(elapsedSeconds);
+        changed |= AdvanceThumbAnimation(elapsedSeconds);
+        changed |= AdvanceScrollbarStyleAnimations(elapsedSeconds);
+        if (!changed) {
             return false;
         }
 
@@ -69,6 +75,11 @@ public sealed class ScrollViewport :
     }
 
     public void Handle(RoutedInputEvent inputEvent) {
+        UpdateThumbPointerState(inputEvent);
+        if (HandleThumbInput(inputEvent)) {
+            return;
+        }
+
         var input = inputEvent.Input;
         if (input.Phase == PointerPhase.Scroll) {
             var horizontalDelta = _scroll.IsHorizontalEnabled
@@ -179,7 +190,9 @@ public sealed class ScrollViewport :
     void ILayoutParticipant.Arrange(
         LayoutArrangeContext context,
         Rect bounds) {
+        UpdateScrollbarMetrics(context.GetStyle(this));
         var content = context.ContentBounds;
+        _contentBounds = content;
         var children = context.GetVisibleChildren(this);
         if (children.Count == 0) {
             SetExtents(content.Width, content.Height, 0, 0);
@@ -191,7 +204,9 @@ public sealed class ScrollViewport :
             child,
             LayoutConstraints.Loose(
                 content.Width,
-                float.PositiveInfinity));
+                float.PositiveInfinity,
+                widthReference: content.Width,
+                heightReference: content.Height));
         SetExtents(
             content.Width,
             content.Height,

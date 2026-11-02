@@ -1,0 +1,74 @@
+<LinearLayout
+  package="Melanopsin.UI.Demo.Views"
+  component="SceneSample"
+  orientation="vertical"
+  spacing="0px"
+  width="100%">
+  <FlexLayout
+    class="page-intro"
+    direction="row"
+    align-items="end"
+    justify-content="space-between"
+    column-gap="4su"
+    width="100%"
+    height="18su"
+    flex-shrink="0">
+    <FlexLayout
+      class="intro-copy"
+      direction="column"
+      justify-content="end"
+      row-gap="0.6su"
+      width="0px"
+      height="100%"
+      flex-grow="1"
+      flex-shrink="1">
+      <TextBlock class="eyebrow" text="3D rendering" wrap="false" />
+      <TextBlock class="page-title" text="Scene view" wrap="false" />
+      <TextBlock
+        class="page-summary"
+        text="A retained camera and raster surface composed inside the UI tree."
+        wrap="false" />
+    </FlexLayout>
+    <FlexLayout
+      class="run-info"
+      direction="column"
+      justify-content="end"
+      align-items="end"
+      row-gap="0.8su"
+      width="27su"
+      height="100%"
+      flex-shrink="0">
+      <TextBlock class="run-status" text="Drag to orbit" wrap="false" />
+      <TextBlock class="run-note" text="Live retained tree" wrap="false" />
+    </FlexLayout>
+  </FlexLayout>
+
+  <LinearLayout class="sample" orientation="vertical" spacing="0px" width="100%">
+    <GridLayout
+      class="three-stage"
+      columns="1"
+      rows="1"
+      width="100%"
+      height="92su">
+      <SceneView
+        class="three-view"
+        scene="{{ ThreeScene }}"
+        width="100%"
+        height="100%" />
+      <StackPanel class="scene-caption">
+        <TextBlock class="scene-title" text="Retained scene" wrap="false" />
+        <TextBlock class="scene-detail" text="Drag to orbit · perspective camera" wrap="false" />
+      </StackPanel>
+    </GridLayout>
+    <FlexLayout
+      class="sample-footer"
+      direction="row"
+      align-items="center"
+      justify-content="space-between"
+      width="100%"
+      height="9su">
+      <TextBlock class="stage-meta" text="Software raster" wrap="false" />
+      <TextBlock class="stage-meta" text="Composited with the UI tree" wrap="false" />
+    </FlexLayout>
+  </LinearLayout>
+</LinearLayout>

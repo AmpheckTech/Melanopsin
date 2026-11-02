@@ -151,7 +151,7 @@ public sealed class Switch :
                 Text = value?.ToString() ?? string.Empty;
                 break;
             case "on":
-                IsOn = ControlValueParser.ReadBoolean(value) ?? false;
+                IsOn = value is bool isOn && isOn;
                 Accessibility.Value = IsOn ? "on" : "off";
                 break;
         }

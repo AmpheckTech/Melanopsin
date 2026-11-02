@@ -1,9 +1,9 @@
+using System.Runtime.InteropServices;
 using NWayland;
 using NWayland.Protocols.CursorShapeV1;
 using NWayland.Protocols.FractionalScaleV1;
 using NWayland.Protocols.Viewporter;
 using NWayland.Protocols.Wayland;
-using System.Runtime.InteropServices;
 
 namespace Melanopsin.UI.Platform.Wayland;
 
@@ -92,7 +92,7 @@ internal sealed class WaylandConnection : IDisposable {
         }
 
         throw new InvalidOperationException(
-            $"Wayland failed to flush the display connection (errno {Marshal.GetLastPInvokeError()})." );
+            $"Wayland failed to flush the display connection (errno {Marshal.GetLastPInvokeError()}).");
     }
 
     public void NotifySeatCapabilities(WlSeat.CapabilityEnum capabilities) {

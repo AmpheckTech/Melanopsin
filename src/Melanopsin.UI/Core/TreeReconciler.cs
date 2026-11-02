@@ -2,9 +2,6 @@ namespace Melanopsin.UI;
 
 internal static class TreeReconciler {
     public static Node Reconcile(Node current, Node incoming) {
-        ArgumentNullException.ThrowIfNull(current);
-        ArgumentNullException.ThrowIfNull(incoming);
-
         if (!CanReuse(current, incoming)) {
             return incoming;
         }
@@ -24,7 +21,10 @@ internal static class TreeReconciler {
 
             ElementMerger.ReplaceText(currentElement, incomingElement);
             ElementMerger.ReplaceBindings(currentElement, incomingElement);
-            ReconcileChildren(currentElement, incomingElement);
+            if (currentElement.ReconcilesChildren) {
+                ReconcileChildren(currentElement, incomingElement);
+            }
+
             currentElement.Invalidate(invalidation, layoutReason, affectsStyle: true);
             return currentElement;
         }

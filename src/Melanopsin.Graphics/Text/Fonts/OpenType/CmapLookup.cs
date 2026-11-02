@@ -22,6 +22,11 @@ internal sealed class CmapLookup {
         var table = fontData.Slice(cmapOffset, cmapLength);
         var reader = new FontBinaryReader(table.Span);
         var recordCount = reader.ReadUInt16(2);
+        if (recordCount > OpenTypeLimits.MaximumCmapRecords) {
+            throw new InvalidDataException(
+                "The cmap table declares too many encoding records.");
+        }
+
         var recordsEnd = checked(4 + (recordCount * 8));
         if (recordsEnd > cmapLength) {
             throw new InvalidDataException(

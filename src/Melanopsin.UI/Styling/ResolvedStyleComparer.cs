@@ -31,9 +31,16 @@ internal static class ResolvedStyleComparer {
                left.TextHorizontalAlignment == right.TextHorizontalAlignment &&
                left.TextVerticalAlignment == right.TextVerticalAlignment &&
                left.Opacity == right.Opacity &&
+               left.FilterBlurRadius == right.FilterBlurRadius &&
+               left.BackdropBlurRadius == right.BackdropBlurRadius &&
                left.TransitionDuration == right.TransitionDuration &&
                left.TransitionEasing == right.TransitionEasing &&
                left.Cursor == right.Cursor &&
+               left.ScrollbarThumbColor == right.ScrollbarThumbColor &&
+               left.ScrollbarTrackColor == right.ScrollbarTrackColor &&
+               left.ScrollbarThickness == right.ScrollbarThickness &&
+               left.ScrollbarMinLength == right.ScrollbarMinLength &&
+               left.ScrollbarInset == right.ScrollbarInset &&
                left.Anchor == right.Anchor &&
                left.UsesViewportUnits == right.UsesViewportUnits;
     }
@@ -48,7 +55,14 @@ internal static class ResolvedStyleComparer {
             before.BorderRadius != after.BorderRadius ||
             before.TextHorizontalAlignment != after.TextHorizontalAlignment ||
             before.TextVerticalAlignment != after.TextVerticalAlignment ||
-            before.Opacity != after.Opacity;
+            before.Opacity != after.Opacity ||
+            before.FilterBlurRadius != after.FilterBlurRadius ||
+            before.BackdropBlurRadius != after.BackdropBlurRadius;
+        paint |= before.ScrollbarThumbColor != after.ScrollbarThumbColor ||
+            before.ScrollbarTrackColor != after.ScrollbarTrackColor ||
+            before.ScrollbarThickness != after.ScrollbarThickness ||
+            before.ScrollbarMinLength != after.ScrollbarMinLength ||
+            before.ScrollbarInset != after.ScrollbarInset;
         var layout = before.Padding != after.Padding ||
             before.Margin != after.Margin ||
             before.Width != after.Width ||
@@ -67,6 +81,8 @@ internal static class ResolvedStyleComparer {
             before.GridColumnSpan != after.GridColumnSpan ||
             before.AlignSelf != after.AlignSelf ||
             before.Anchor != after.Anchor ||
+            before.ScrollbarThickness != after.ScrollbarThickness ||
+            before.ScrollbarInset != after.ScrollbarInset ||
             before.UsesViewportUnits != after.UsesViewportUnits ||
             !ReferenceEquals(before.Font, after.Font) ||
             before.FontSize != after.FontSize;

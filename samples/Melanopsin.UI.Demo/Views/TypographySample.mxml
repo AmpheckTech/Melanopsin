@@ -1,0 +1,223 @@
+<LinearLayout
+  package="Melanopsin.UI.Demo.Views"
+  component="TypographySample"
+  class="type-sample"
+  orientation="vertical"
+  spacing="0px"
+  width="100%">
+  <FlexLayout
+    class="page-intro"
+    direction="row"
+    align-items="end"
+    justify-content="space-between"
+    column-gap="4su"
+    width="100%"
+    height="18su"
+    flex-shrink="0">
+    <FlexLayout
+      direction="column"
+      justify-content="end"
+      row-gap="0.6su"
+      width="0px"
+      height="100%"
+      flex-grow="1">
+      <TextBlock class="eyebrow" text="Typography" wrap="false" />
+      <TextBlock class="page-title" text="Text shaping" wrap="false" />
+      <TextBlock
+        class="page-summary"
+        text="Measure wrapping, bidirectional runs, complex scripts, emoji and rich text."
+        wrap="false" />
+    </FlexLayout>
+    <FlexLayout
+      class="run-info"
+      direction="column"
+      justify-content="end"
+      align-items="end"
+      row-gap="0.8su"
+      width="27su"
+      height="100%"
+      flex-shrink="0">
+      <TextBlock class="run-status" text="Unicode-aware" wrap="false" />
+      <TextBlock class="run-note" text="HarfBuzz shaping · retained lines" wrap="false" />
+    </FlexLayout>
+  </FlexLayout>
+
+  <LinearLayout class="type-stack" orientation="vertical" spacing="2su" width="100%">
+    <FlexLayout
+      class="section-heading"
+      direction="row"
+      align-items="center"
+      justify-content="space-between"
+      width="100%"
+      height="7su">
+      <TextBlock class="section-title" text="Scale" wrap="false" />
+      <TextBlock class="stage-meta" text="FU · FONT UNIT" wrap="false" />
+    </FlexLayout>
+
+    <LinearLayout class="type-card" orientation="vertical" spacing="0px" width="100%">
+      @for (specimen of TypeScale; track specimen.Class) {
+        <FlexLayout
+          class="type-row"
+          direction="row"
+          align-items="center"
+          column-gap="2su"
+          width="100%">
+          <TextBlock
+            class="type-label"
+            text="{{ specimen.Label }}"
+            width="18su"
+            flex-shrink="0"
+            wrap="false" />
+          <TextBlock
+            class="{{ specimen.Class }}"
+            text="{{ specimen.Sample }}"
+            width="0px"
+            flex-grow="1" />
+        </FlexLayout>
+      }
+    </LinearLayout>
+
+    <FlexLayout
+      class="section-heading"
+      direction="row"
+      align-items="center"
+      justify-content="space-between"
+      width="100%"
+      height="7su">
+      <TextBlock class="section-title" text="Paragraph" wrap="false" />
+      <TextBlock class="stage-meta" text="WRAP · MIXED SCRIPT" wrap="false" />
+    </FlexLayout>
+
+    <LinearLayout class="type-card" orientation="vertical" spacing="0px" width="100%">
+      <LinearLayout class="type-row" orientation="vertical" spacing="1su" width="100%">
+        <TextBlock class="type-label" text="wrapped · cjk" wrap="false" />
+        <TextBlock class="type-body" text="{{ TypeParagraph }}" width="100%" />
+      </LinearLayout>
+      <LinearLayout class="type-row" orientation="vertical" spacing="1su" width="100%">
+        <TextBlock class="type-label" text="mixed script · punctuation" wrap="false" />
+        <TextBlock class="type-body" text="{{ TypeMixedScript }}" width="100%" />
+      </LinearLayout>
+    </LinearLayout>
+
+    <FlexLayout
+      class="section-heading"
+      direction="row"
+      align-items="center"
+      justify-content="space-between"
+      width="100%"
+      height="7su">
+      <TextBlock class="section-title" text="Bidirectional text" wrap="false" />
+      <TextBlock class="stage-meta" text="BASE DIRECTION · RUN REORDER" wrap="false" />
+    </FlexLayout>
+
+    <LinearLayout class="type-card" orientation="vertical" spacing="0px" width="100%">
+      @for (item of BidiCases; track item.Label) {
+        <LinearLayout class="type-row" orientation="vertical" spacing="1su" width="100%">
+          <TextBlock class="type-label" text="{{ item.Label }}" wrap="false" />
+          <TextBlock class="type-body" text="{{ item.Sample }}" width="100%" />
+        </LinearLayout>
+      }
+    </LinearLayout>
+
+    <FlexLayout
+      class="section-heading"
+      direction="row"
+      align-items="center"
+      justify-content="space-between"
+      width="100%"
+      height="7su">
+      <TextBlock class="section-title" text="Scripts" wrap="false" />
+      <TextBlock class="stage-meta" text="REORDER · JOINING · MARKS" wrap="false" />
+    </FlexLayout>
+
+    <LinearLayout class="type-card" orientation="vertical" spacing="0px" width="100%">
+      @for (item of ScriptCases; track item.Label) {
+        <LinearLayout class="type-row" orientation="vertical" spacing="1su" width="100%">
+          <TextBlock class="type-label" text="{{ item.Label }}" wrap="false" />
+          <TextBlock class="type-body" text="{{ item.Sample }}" width="100%" />
+        </LinearLayout>
+      }
+    </LinearLayout>
+
+    <FlexLayout
+      class="section-heading"
+      direction="row"
+      align-items="center"
+      justify-content="space-between"
+      width="100%"
+      height="7su">
+      <TextBlock class="section-title" text="Emoji" wrap="false" />
+      <TextBlock class="stage-meta" text="GRAPHEME CLUSTERS · LINE HEIGHT" wrap="false" />
+    </FlexLayout>
+
+    <LinearLayout class="type-card" orientation="vertical" spacing="0px" width="100%">
+      @for (item of EmojiCases; track item.Label) {
+        <LinearLayout class="type-row" orientation="vertical" spacing="1su" width="100%">
+          <TextBlock class="type-label" text="{{ item.Label }}" wrap="false" />
+          <TextBlock class="type-body" text="{{ item.Sample }}" width="100%" />
+        </LinearLayout>
+      }
+    </LinearLayout>
+
+    <FlexLayout
+      class="section-heading"
+      direction="row"
+      align-items="center"
+      justify-content="space-between"
+      width="100%"
+      height="7su">
+      <TextBlock class="section-title" text="Rich text" wrap="false" />
+      <TextBlock class="stage-meta" text="INLINE SPANS · ONE LINE BOX" wrap="false" />
+    </FlexLayout>
+
+    <LinearLayout class="type-card" orientation="vertical" spacing="0px" width="100%">
+      @for (paragraph of RichSpecimenRows; track paragraph.Label) {
+        <LinearLayout class="type-row" orientation="vertical" spacing="1su" width="100%">
+          <TextBlock class="type-label" text="{{ paragraph.Label }}" wrap="false" />
+          <RichText class="type-body" spans="{{ paragraph.Spans }}" width="100%" />
+        </LinearLayout>
+      }
+    </LinearLayout>
+
+    <FlexLayout
+      class="section-heading"
+      direction="row"
+      align-items="center"
+      justify-content="space-between"
+      width="100%"
+      height="7su">
+      <TextBlock class="section-title" text="Single line" wrap="false" />
+      <TextBlock class="stage-meta" text="ELLIPSIS · NO WRAP · FLEXIBLE BOX" wrap="false" />
+    </FlexLayout>
+
+    <LinearLayout class="type-card" orientation="vertical" spacing="0px" width="100%">
+      <LinearLayout class="type-row" orientation="vertical" spacing="1su" width="100%">
+        <TextBlock class="type-label" text="clipped · 100%" wrap="false" />
+        <TextBlock class="type-body" text="{{ TypeLongLine }}" width="100%" wrap="false" />
+      </LinearLayout>
+      <FlexLayout
+        class="type-row"
+        direction="row"
+        align-items="stretch"
+        column-gap="2su"
+        width="100%">
+        <LinearLayout class="align-box" orientation="vertical" width="0px" flex-grow="1">
+          <TextBlock class="type-label" text="START" wrap="false" />
+          <TextBlock class="type-body align-start" text="Start" wrap="false" />
+        </LinearLayout>
+        <LinearLayout class="align-box" orientation="vertical" width="0px" flex-grow="1">
+          <TextBlock class="type-label" text="CENTER" wrap="false" />
+          <TextBlock class="type-body align-center" text="Center" wrap="false" />
+        </LinearLayout>
+        <LinearLayout class="align-box" orientation="vertical" width="0px" flex-grow="1">
+          <TextBlock class="type-label" text="END" wrap="false" />
+          <TextBlock class="type-body align-end" text="End" wrap="false" />
+        </LinearLayout>
+        <LinearLayout class="align-box" orientation="vertical" width="0px" flex-grow="1" flex-shrink="1">
+          <TextBlock class="type-label" text="FLEXIBLE" wrap="false" />
+          <TextBlock class="type-small" text="{{ TypeLongLine }}" width="100%" wrap="false" />
+        </LinearLayout>
+      </FlexLayout>
+    </LinearLayout>
+  </LinearLayout>
+</LinearLayout>

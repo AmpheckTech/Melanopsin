@@ -1,14 +1,13 @@
-using Melanopsin.Graphics.Text.Fonts;
 using Melanopsin.Graphics.Rendering;
+using Melanopsin.Graphics.Text.Fonts;
 using SkiaSharp;
 
 namespace Melanopsin.Graphics.Backend.Skia;
 
 /// <summary>
-/// Optional OpenGL backend. On Windows it uses WGL; on Linux it uses EGL with
-/// Wayland or surfaceless display support. Render layers are composed into
-/// GPU-backed Skia surfaces and copied into a native presentation surface.
-/// Platforms that cannot consume the GPU surface fall back to a BGRA readback.
+/// Optional OpenGL backend: WGL on Windows, EGL on Linux. Render layers are
+/// composed into GPU-backed Skia surfaces; platforms that cannot consume them
+/// fall back to a BGRA readback.
 /// </summary>
 public sealed class SkiaGpuRenderBackend : IRenderBackend {
     private readonly FontFace _font;
@@ -22,10 +21,9 @@ public sealed class SkiaGpuRenderBackend : IRenderBackend {
     }
 
     /// <summary>
-    /// Creates an OpenGL backend using an existing native display connection.
-    /// On Linux/Wayland this must be the <c>wl_display</c> used by the window
-    /// host so EGL window surfaces share the same connection and event queue.
-    /// The caller retains ownership of the native display.
+    /// Creates an OpenGL backend using an existing native display connection. On
+    /// Wayland this must be the <c>wl_display</c> the window host uses, so EGL
+    /// surfaces share its connection and event queue. The caller keeps ownership.
     /// </summary>
     public SkiaGpuRenderBackend(FontFace font, IntPtr nativeDisplay) {
         ArgumentNullException.ThrowIfNull(font);

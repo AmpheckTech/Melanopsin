@@ -61,7 +61,7 @@ public static class ResourcePackCompiler {
         return new ResourcePackBuildResult(
             outputPath,
             manifest.Package,
-            manifest.Descriptors.Count,
+            manifest.Contract.Descriptors.Count,
             values.Count);
     }
 

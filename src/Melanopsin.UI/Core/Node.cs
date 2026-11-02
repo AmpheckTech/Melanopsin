@@ -1,4 +1,3 @@
-using System.Runtime.ExceptionServices;
 using Melanopsin.UI.Accessibility;
 using Melanopsin.UI.Input;
 
@@ -7,7 +6,7 @@ namespace Melanopsin.UI;
 /// <summary>
 /// Base type for nodes in a compiled UI tree.
 /// </summary>
-public abstract class Node : IContextStore {
+public abstract partial class Node : IContextStore {
     private static long s_nextAccessibilityId;
     private bool _isRepaintBoundary;
     private bool _allowsRasterCache = true;
@@ -84,7 +83,7 @@ public abstract class Node : IContextStore {
 
             _isFocused = value;
             OnFocusChanged(value);
-            InvalidatePaint();
+            InvalidateState();
         }
     }
 
@@ -96,7 +95,7 @@ public abstract class Node : IContextStore {
             }
 
             _isHovered = value;
-            InvalidatePaint();
+            InvalidateState();
         }
     }
 
@@ -135,7 +134,7 @@ public abstract class Node : IContextStore {
 
         if (!enabled) {
             if (_states?.Remove(state) == true) {
-                InvalidatePaint();
+                InvalidateState();
             }
 
             return;
@@ -147,7 +146,7 @@ public abstract class Node : IContextStore {
         }
 
         _states[state] = true;
-        InvalidatePaint();
+        InvalidateState();
     }
 
     public virtual bool IsFocusable { get; protected set; }
@@ -185,10 +184,8 @@ public abstract class Node : IContextStore {
     }
 
     /// <summary>
-    /// Marks this node as a relayout boundary for damage diagnostics and
-    /// cached hit-region subtree reuse. Cross-pass measurement reuse is not
-    /// limited to boundaries, so this flag must not be used as a correctness
-    /// switch for the measurement cache.
+    /// Marks this node as a relayout boundary for damage diagnostics and cached
+    /// hit-region reuse. It does not affect measurement-cache reuse.
     /// </summary>
     public bool IsRelayoutBoundary {
         get => _isRelayoutBoundary;
@@ -252,6 +249,13 @@ public abstract class Node : IContextStore {
             affectsStyle: false);
     }
 
+    internal void InvalidateState() {
+        Invalidate(
+            InvalidationKind.Paint | InvalidationKind.Style,
+            LayoutInvalidationReason.Style,
+            affectsStyle: true);
+    }
+
     internal void InvalidateBuild() {
         Invalidate(
             InvalidationKind.Build,
@@ -279,62 +283,6 @@ public abstract class Node : IContextStore {
 
     public AccessibilityProperties Accessibility { get; } =
         new(AccessibilityRole.Region);
-
-    /// <summary>
-    /// Commits a parent-pointer change. The owning element updates its child
-    /// collection first, then calls <see cref="CompleteParentChange"/> to run
-    /// observable callbacks against a consistent tree.
-    /// </summary>
-    internal void SetParentState(Node? parent) {
-        Parent = parent;
-    }
-
-    internal void CompleteParentChange() {
-        OnParentChanged(Parent is not null);
-        if (Parent?.IsMounted == true) {
-            MountTree();
-        } else {
-            UnmountTree();
-        }
-    }
-
-    internal void MountTree() {
-        if (_isMounted) {
-            return;
-        }
-
-        _isMounted = true;
-        Exception? failure = null;
-        CaptureException(ref failure, OnMounted);
-        CaptureException(ref failure, () => Mounted?.Invoke(this));
-        MountChildren(ref failure);
-        ThrowIfFailed(failure);
-    }
-
-    internal void UnmountTree() {
-        if (!_isMounted) {
-            return;
-        }
-
-        Exception? failure = null;
-        UnmountChildren(ref failure);
-        _isMounted = false;
-        if (_isFocused) {
-            IsFocused = false;
-        }
-
-        CaptureException(ref failure, () => _mountCancellation?.Cancel());
-        CaptureException(ref failure, OnUnmounted);
-        CaptureException(ref failure, () => Unmounted?.Invoke(this));
-        CaptureException(ref failure, DisposeMountResources);
-        ThrowIfFailed(failure);
-    }
-
-    internal virtual void MountChildren(ref Exception? failure) {
-    }
-
-    internal virtual void UnmountChildren(ref Exception? failure) {
-    }
 
     internal void RaiseInvalidated(
         Node source,
@@ -392,69 +340,4 @@ public abstract class Node : IContextStore {
         handler?.Invoke(input);
     }
 
-    protected internal virtual void OnMounted() {
-    }
-
-    protected internal virtual void OnUnmounted() {
-    }
-
-    internal virtual void OnParentChanged(bool hasParent) {
-    }
-
-    public void RegisterMountedResource(IDisposable resource) {
-        ArgumentNullException.ThrowIfNull(resource);
-        if (!_isMounted) {
-            throw new InvalidOperationException(
-                "A mounted resource can only be registered while the node is mounted.");
-        }
-
-        (_mountResources ??= []).Add(resource);
-    }
-
-    internal static void CaptureException(
-        ref Exception? failure,
-        Action action) {
-        try {
-            action();
-        } catch (Exception error) {
-            failure = CombineFailures(failure, error);
-        }
-    }
-
-    internal static void ThrowIfFailed(Exception? failure) {
-        if (failure is not null) {
-            ExceptionDispatchInfo.Capture(failure).Throw();
-        }
-    }
-
-    private void DisposeMountResources() {
-        Exception? failure = null;
-        if (_mountResources is not null) {
-            for (var index = _mountResources.Count - 1; index >= 0; index--) {
-                CaptureException(
-                    ref failure,
-                    _mountResources[index].Dispose);
-            }
-
-            _mountResources.Clear();
-        }
-
-        CaptureException(ref failure, () => _mountCancellation?.Dispose());
-
-        _mountCancellation = null;
-        ThrowIfFailed(failure);
-    }
-
-    private static Exception CombineFailures(
-        Exception? first,
-        Exception second) {
-        if (first is null) {
-            return second;
-        }
-
-        return first is AggregateException aggregate
-            ? new AggregateException(
-                aggregate.InnerExceptions.Append(second))
-            : new AggregateException(first, second);
-    }
 }

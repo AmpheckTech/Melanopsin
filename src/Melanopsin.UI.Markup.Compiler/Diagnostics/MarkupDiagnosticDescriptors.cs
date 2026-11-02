@@ -65,6 +65,38 @@ internal static class MarkupDiagnosticDescriptors {
         MarkupDiagnosticCodes.InvalidReference,
         "Invalid markup reference");
 
+    public static readonly DiagnosticDescriptor UnknownEvent = Create(
+        MarkupDiagnosticCodes.UnknownEvent,
+        "Unknown XML view control event");
+
+    public static readonly DiagnosticDescriptor InvalidEventExpression = Create(
+        MarkupDiagnosticCodes.InvalidEventExpression,
+        "Invalid XML view event expression");
+
+    public static readonly DiagnosticDescriptor InvalidStylesheet = Create(
+        MarkupDiagnosticCodes.InvalidStylesheet,
+        "Invalid typed stylesheet");
+
+    public static readonly DiagnosticDescriptor UnknownStyleSlot = Create(
+        MarkupDiagnosticCodes.UnknownStyleSlot,
+        "Unknown style slot");
+
+    public static readonly DiagnosticDescriptor StyleSlotTypeMismatch = Create(
+        MarkupDiagnosticCodes.StyleSlotTypeMismatch,
+        "Incompatible style slot type");
+
+    public static readonly DiagnosticDescriptor InvalidNamespace = Create(
+        MarkupDiagnosticCodes.InvalidNamespace,
+        "Invalid CLR namespace mapping");
+
+    public static readonly DiagnosticDescriptor AmbiguousControl = Create(
+        MarkupDiagnosticCodes.AmbiguousControl,
+        "Ambiguous unqualified XML view control");
+
+    public static readonly DiagnosticDescriptor UnknownControlNamespace = Create(
+        MarkupDiagnosticCodes.UnknownControlNamespace,
+        "Unknown XML view control namespace");
+
     public static DiagnosticDescriptor ForCode(string code) {
         return code switch {
             MarkupDiagnosticCodes.UnsupportedDirective => UnsupportedDirective,
@@ -80,6 +112,14 @@ internal static class MarkupDiagnosticDescriptors {
             MarkupDiagnosticCodes.InvalidResourceReference => InvalidResourceReference,
             MarkupDiagnosticCodes.IncompatibleResourceType => IncompatibleResourceType,
             MarkupDiagnosticCodes.InvalidReference => InvalidReference,
+            MarkupDiagnosticCodes.UnknownEvent => UnknownEvent,
+            MarkupDiagnosticCodes.InvalidEventExpression => InvalidEventExpression,
+            MarkupDiagnosticCodes.InvalidStylesheet => InvalidStylesheet,
+            MarkupDiagnosticCodes.UnknownStyleSlot => UnknownStyleSlot,
+            MarkupDiagnosticCodes.StyleSlotTypeMismatch => StyleSlotTypeMismatch,
+            MarkupDiagnosticCodes.InvalidNamespace => InvalidNamespace,
+            MarkupDiagnosticCodes.AmbiguousControl => AmbiguousControl,
+            MarkupDiagnosticCodes.UnknownControlNamespace => UnknownControlNamespace,
             _ => InvalidSyntax,
         };
     }

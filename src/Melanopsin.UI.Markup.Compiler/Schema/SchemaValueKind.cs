@@ -4,6 +4,7 @@ internal enum SchemaValueKind {
     Any,
     Number,
     Length,
+    Color,
     Integer,
     Boolean,
     Enum,

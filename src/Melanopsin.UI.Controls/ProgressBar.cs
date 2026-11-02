@@ -59,10 +59,10 @@ public sealed class ProgressBar : Control, IRenderCommandProvider {
         base.OnSetAttribute(name, value);
         switch (name) {
             case "value":
-                Value = ControlValueParser.ReadNumber(value) ?? Value;
+                Value = value is float progress ? progress : Value;
                 break;
             case "maximum":
-                Maximum = ControlValueParser.ReadNumber(value) ?? Maximum;
+                Maximum = value is float maximum ? maximum : Maximum;
                 break;
         }
     }

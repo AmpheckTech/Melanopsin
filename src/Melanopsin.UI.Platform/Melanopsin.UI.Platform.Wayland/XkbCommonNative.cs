@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
-using Microsoft.Win32.SafeHandles;
 using Melanopsin.UI.Input;
+using Microsoft.Win32.SafeHandles;
 
 namespace Melanopsin.UI.Platform.Wayland;
 
@@ -10,6 +10,9 @@ internal sealed unsafe class WaylandXkbState : IDisposable {
     private const int StateModsEffective = 8;
     private const uint XkbKeyDown = 1;
     private const uint XkbKeyUp = 0;
+    private const uint MaximumEvdevKeyCode = 0x2ff;
+    private const uint MaximumKeymapBytes = 16 * 1024 * 1024;
+    private const int MaximumTextBytes = 256;
 
     private IntPtr _context;
     private IntPtr _keymap;
@@ -64,21 +67,31 @@ internal sealed unsafe class WaylandXkbState : IDisposable {
 
     public uint GetKeySymbol(uint keycode, KeyPhase phase) {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        if (keycode > MaximumEvdevKeyCode) {
+            return 0;
+        }
+
+        var nativeKeycode = keycode + 8;
         _ = XkbCommonNative.StateUpdateKey(
             _state,
-            keycode + 8,
+            nativeKeycode,
             phase == KeyPhase.Down ? XkbKeyDown : XkbKeyUp);
-        return XkbCommonNative.StateKeyGetOneSym(_state, keycode + 8);
+        return XkbCommonNative.StateKeyGetOneSym(_state, nativeKeycode);
     }
 
     public string? GetText(uint keycode) {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        if (keycode > MaximumEvdevKeyCode) {
+            return null;
+        }
+
+        var nativeKeycode = keycode + 8;
         var length = XkbCommonNative.StateKeyGetUtf8(
             _state,
-            keycode + 8,
+            nativeKeycode,
             null,
             0);
-        if (length <= 1) {
+        if (length <= 1 || length > MaximumTextBytes) {
             return null;
         }
 
@@ -86,10 +99,10 @@ internal sealed unsafe class WaylandXkbState : IDisposable {
         fixed (byte* pointer = buffer) {
             var copied = XkbCommonNative.StateKeyGetUtf8(
                 _state,
-                keycode + 8,
+                nativeKeycode,
                 pointer,
                 (nuint)buffer.Length);
-            if (copied <= 1) {
+            if (copied <= 1 || copied > buffer.Length) {
                 return null;
             }
 
@@ -128,13 +141,18 @@ internal sealed unsafe class WaylandXkbState : IDisposable {
     }
 
     private static string ReadKeymap(int fd, uint size) {
+        using var handle = new SafeFileHandle((IntPtr)fd, ownsHandle: true);
         if (size == 0) {
             throw new InvalidOperationException(
                 "The Wayland keyboard keymap is empty.");
         }
 
+        if (size > MaximumKeymapBytes) {
+            throw new InvalidOperationException(
+                "The Wayland keyboard keymap exceeds the supported size limit.");
+        }
+
         var bytes = new byte[checked((int)size)];
-        using var handle = new SafeFileHandle((IntPtr)fd, ownsHandle: true);
         var offset = 0;
         while (offset < bytes.Length) {
             var read = RandomAccess.Read(

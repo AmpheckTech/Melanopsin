@@ -10,23 +10,25 @@ namespace Melanopsin.UI.Markup.Compiler.Parsing;
 
 internal sealed class MarkupParser {
     private readonly List<MarkupDiagnostic> _diagnostics = [];
+    private readonly HashSet<string> _namespaceUris = new(StringComparer.Ordinal);
     private readonly XmlSourceMap _sourceMap;
     private readonly MarkupTreeParser _treeParser;
     private string? _namespace;
-    private string? _className;
+    private string? _componentName;
     private string? _resourcePackage;
 
-    private MarkupParser(XmlSourceMap sourceMap) {
+    private MarkupParser(XmlSourceMap sourceMap, MarkupCodeMask codeMask) {
         _sourceMap = sourceMap;
-        _treeParser = new MarkupTreeParser(sourceMap, ReportDiagnostic);
+        _treeParser = new MarkupTreeParser(sourceMap, codeMask, ReportDiagnostic);
     }
 
     public static MarkupDocument Parse(string path, string source) {
         var sourceMap = new XmlSourceMap(source);
+        var codeMask = MarkupCodeMask.Apply(source);
         XDocument xml;
         try {
             xml = XDocument.Parse(
-                source,
+                codeMask.Encoded,
                 LoadOptions.PreserveWhitespace | LoadOptions.SetLineInfo);
         } catch (XmlException exception) {
             return new MarkupDocument(
@@ -51,7 +53,8 @@ internal sealed class MarkupParser {
                 ]);
         }
 
-        var parser = new MarkupParser(sourceMap);
+        var parser = new MarkupParser(sourceMap, codeMask);
+        parser.ReadNamespaces(xml.Root);
         var nodes = parser.ParseDocument(xml.Root);
 
         return new MarkupDocument(
@@ -59,9 +62,21 @@ internal sealed class MarkupParser {
             source,
             nodes,
             parser._namespace,
-            parser._className,
+            parser._componentName,
             parser._resourcePackage,
+            parser._namespaceUris,
+            parser._treeParser.CodeBlocks,
             parser._diagnostics);
+    }
+
+    private void ReadNamespaces(XElement root) {
+        foreach (var attribute in root.DescendantsAndSelf().Attributes()) {
+            if (!attribute.IsNamespaceDeclaration || attribute.Value.Length == 0) {
+                continue;
+            }
+
+            _namespaceUris.Add(attribute.Value);
+        }
     }
 
     private IReadOnlyList<MarkupNode> ParseDocument(XElement root) {
@@ -70,16 +85,16 @@ internal sealed class MarkupParser {
         if (string.IsNullOrWhiteSpace(_namespace)) {
             Report(
                 MarkupDiagnosticCodes.InvalidMetadata,
-                "The root element must declare m:package.",
+                "The root element must declare package.",
                 root,
                 1);
         }
 
-        if (!string.IsNullOrWhiteSpace(_className) &&
-            !SyntaxFacts.IsValidIdentifier(_className)) {
+        if (!string.IsNullOrWhiteSpace(_componentName) &&
+            !SyntaxFacts.IsValidIdentifier(_componentName)) {
             Report(
                 MarkupDiagnosticCodes.InvalidMetadata,
-                $"'{_className}' is not a valid C# class name.",
+                $"'{_componentName}' is not a valid C# component name.",
                 root,
                 1);
         }
@@ -107,7 +122,7 @@ internal sealed class MarkupParser {
             if (value.Length == 0) {
                 Report(
                     MarkupDiagnosticCodes.InvalidMetadata,
-                    $"m:{attribute.Name.LocalName} requires a value.",
+                    $"{attribute.Name.LocalName} requires a value.",
                     attribute,
                     1);
                 continue;
@@ -115,16 +130,16 @@ internal sealed class MarkupParser {
 
             switch (attribute.Name.LocalName) {
                 case "package":
-                    SetMetadata(ref _namespace, value, "m:package", attribute);
+                    SetMetadata(ref _namespace, value, "package", attribute);
                     break;
-                case "class":
-                    SetMetadata(ref _className, value, "m:class", attribute);
+                case "component":
+                    SetMetadata(ref _componentName, value, "component", attribute);
                     break;
                 case "resources":
                     SetMetadata(
                         ref _resourcePackage,
                         value,
-                        "m:resources",
+                        "resources",
                         attribute);
                     break;
             }

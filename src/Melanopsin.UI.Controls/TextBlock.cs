@@ -57,9 +57,9 @@ public sealed class TextBlock :
     protected override void OnSetAttribute(string name, object? value) {
         base.OnSetAttribute(name, value);
         if (name == "text") {
-            Text = value?.ToString() ?? string.Empty;
+            Text = value as string ?? string.Empty;
         } else if (name == "wrap") {
-            WrapText = ControlValueParser.ReadBoolean(value) ?? WrapText;
+            WrapText = value is bool wrap ? wrap : WrapText;
         }
     }
 }

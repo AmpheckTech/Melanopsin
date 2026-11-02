@@ -1,0 +1,142 @@
+{
+  "name": "melanopsin-mxml",
+  "displayName": "Melanopsin MXML",
+  "description": "MXML language support for Melanopsin UI.",
+  "version": "0.1.7",
+  "publisher": "melanopsin",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/*.mxml",
+    "onLanguage:melanopsin-mxml"
+  ],
+  "main": "./out/extension.js",
+  "files": [
+    "out/**",
+    "language-configuration.json",
+    "syntaxes/**"
+  ],
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "npm run check && npm run bundle",
+    "check": "tsc -p . --noEmit",
+    "bundle": "esbuild src/extension.ts --bundle --platform=node --format=cjs --external:vscode --sourcemap --outfile=out/extension.js",
+    "watch": "esbuild src/extension.ts --bundle --platform=node --format=cjs --external:vscode --sourcemap --outfile=out/extension.js --watch"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.0",
+    "@types/vscode": "^1.96.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.0"
+  },
+  "overrides": {
+    "minimatch": "^11.0.1"
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "melanopsin-mxml",
+        "aliases": [
+          "Melanopsin MXML",
+          "mxml"
+        ],
+        "extensions": [
+          ".mxml"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "melanopsin-mxml",
+        "scopeName": "source.mxml",
+        "path": "./syntaxes/mxml.tmLanguage.json"
+      }
+    ],
+    "semanticTokenTypes": [
+      {
+        "id": "className",
+        "description": "A style class referenced by a markup `class` attribute."
+      }
+    ],
+    "semanticTokenScopes": [
+      {
+        "language": "melanopsin-mxml",
+        "scopes": {
+          "type": [
+            "entity.name.tag"
+          ],
+          "class": [
+            "entity.name.type",
+            "support.class"
+          ],
+          "className": [
+            "entity.other.attribute-name.class.css",
+            "entity.other.attribute-name.class"
+          ],
+          "property": [
+            "variable.other.property"
+          ],
+          "event": [
+            "support.function.mxml",
+            "support.function",
+            "entity.name.function"
+          ],
+          "keyword": [
+            "keyword.control"
+          ],
+          "variable": [
+            "variable.other.readwrite",
+            "entity.name.variable"
+          ],
+          "function": [
+            "entity.name.function.mxml",
+            "entity.name.function",
+            "support.function"
+          ],
+          "enumMember": [
+            "variable.other.enummember"
+          ],
+          "number": [
+            "constant.numeric"
+          ]
+        }
+      }
+    ],
+    "configurationDefaults": {
+      "[melanopsin-mxml]": {
+        "editor.quickSuggestions": {
+          "comments": "off",
+          "strings": "on",
+          "other": "on"
+        },
+        "editor.suggestOnTriggerCharacters": true
+      }
+    },
+    "commands": [
+      {
+        "command": "melanopsin.mxml.restartLanguageServer",
+        "title": "Melanopsin MXML: Restart Language Server"
+      }
+    ],
+    "configuration": {
+      "title": "Melanopsin MXML",
+      "properties": {
+        "melanopsin.mxml.server.path": {
+          "type": "string",
+          "default": "",
+          "scope": "machine-overridable",
+          "description": "Absolute path to Melanopsin.UI.LanguageServer.dll or its executable. When empty, the extension searches the workspace and open files for the repository build output."
+        }
+      }
+    }
+  }
+}

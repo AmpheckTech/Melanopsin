@@ -9,20 +9,31 @@ namespace Melanopsin.UI.Markup.Compiler.Schema;
 
 internal sealed class ControlCatalog {
     private readonly Dictionary<string, ControlDefinition> _controls;
+    private readonly Dictionary<string, List<ControlDefinition>> _controlsByName;
 
     private ControlCatalog(
+        string assemblyName,
         Dictionary<string, ControlDefinition> controls,
+        Dictionary<string, List<ControlDefinition>> controlsByName,
         IReadOnlyList<MarkupSchemaDiagnostic> diagnostics) {
+        AssemblyName = assemblyName;
         _controls = controls;
+        _controlsByName = controlsByName;
         Diagnostics = diagnostics;
     }
 
+    public string AssemblyName { get; }
+
     public IReadOnlyList<MarkupSchemaDiagnostic> Diagnostics { get; }
+
+    public IEnumerable<ControlDefinition> All => _controls.Values;
 
     public static ControlCatalog Create(
         Compilation compilation,
         CancellationToken cancellationToken) {
         var controls = new Dictionary<string, ControlDefinition>(StringComparer.Ordinal);
+        var controlsByName = new Dictionary<string, List<ControlDefinition>>(
+            StringComparer.Ordinal);
         var diagnostics = new List<MarkupSchemaDiagnostic>();
 
         foreach (var type in ControlTypeDiscovery.Enumerate(compilation, cancellationToken)) {
@@ -32,26 +43,66 @@ internal sealed class ControlCatalog {
                 continue;
             }
 
-            if (controls.TryGetValue(definition.Name, out var existing)) {
-                if (!string.Equals(existing.TypeName, definition.TypeName, StringComparison.Ordinal)) {
-                    diagnostics.Add(new MarkupSchemaDiagnostic(
-                        MarkupDiagnosticCodes.InvalidControlSchema,
-                        $"Markup element '{definition.Name}' is declared by both " +
-                        $"'{existing.TypeName}' and '{definition.TypeName}'."));
-                }
-
+            var key = Key(definition.Namespace, definition.Name);
+            if (controls.TryGetValue(key, out var existing)) {
+                var declaration = string.Equals(
+                    existing.AssemblyName,
+                    definition.AssemblyName,
+                    StringComparison.Ordinal)
+                    ? $"more than once in assembly '{definition.AssemblyName}' by " +
+                      $"'{existing.TypeName}' and '{definition.TypeName}'"
+                    : $"by '{existing.TypeName}' in assembly '{existing.AssemblyName}' and " +
+                      $"'{definition.TypeName}' in assembly '{definition.AssemblyName}'";
+                diagnostics.Add(new MarkupSchemaDiagnostic(
+                    MarkupDiagnosticCodes.InvalidControlSchema,
+                    $"Markup element '{definition.QualifiedName}' is declared {declaration}."));
                 continue;
             }
 
-            controls.Add(definition.Name, definition);
+            controls.Add(key, definition);
+            if (!controlsByName.TryGetValue(definition.Name, out var definitions)) {
+                definitions = [];
+                controlsByName.Add(definition.Name, definitions);
+            }
+
+            definitions.Add(definition);
         }
 
-        return new ControlCatalog(controls, diagnostics);
+        return new ControlCatalog(
+            compilation.AssemblyName ?? string.Empty,
+            controls,
+            controlsByName,
+            diagnostics);
     }
 
-    public ControlDefinition? Find(string name) {
-        return _controls.TryGetValue(name, out var definition)
+    public ControlDefinition? Find(string namespaceName, string name) {
+        return _controls.TryGetValue(Key(namespaceName, name), out var definition)
             ? definition
             : null;
+    }
+
+    public ControlDefinition? Find(
+        string namespaceName,
+        string? assemblyName,
+        string name) {
+        var definition = Find(namespaceName, name);
+        return definition is not null &&
+               (string.IsNullOrEmpty(assemblyName) ||
+                string.Equals(
+                    definition.AssemblyName,
+                    assemblyName,
+                    StringComparison.Ordinal))
+            ? definition
+            : null;
+    }
+
+    public IReadOnlyList<ControlDefinition> FindAll(string name) {
+        return _controlsByName.TryGetValue(name, out var definitions)
+            ? definitions
+            : Array.Empty<ControlDefinition>();
+    }
+
+    private static string Key(string namespaceName, string name) {
+        return namespaceName + "\0" + name;
     }
 }

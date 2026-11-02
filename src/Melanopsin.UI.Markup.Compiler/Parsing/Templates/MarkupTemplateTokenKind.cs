@@ -11,5 +11,6 @@ internal enum MarkupTemplateTokenKind {
     Switch,
     Case,
     Default,
+    Code,
     EndBlock,
 }

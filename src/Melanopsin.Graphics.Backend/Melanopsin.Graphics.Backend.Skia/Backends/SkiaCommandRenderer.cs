@@ -1,5 +1,6 @@
 using Melanopsin.Graphics.Text;
 using SkiaSharp;
+using static Melanopsin.Graphics.Backend.Skia.SkiaPrimitiveConversions;
 
 namespace Melanopsin.Graphics.Backend.Skia;
 
@@ -178,11 +179,4 @@ internal sealed class SkiaCommandRenderer : IDisposable {
         }
     }
 
-    private static SKRect ToSkRect(Rect rect) {
-        return new SKRect(rect.X, rect.Y, rect.Right, rect.Bottom);
-    }
-
-    private static SKColor ToSkColor(Color color) {
-        return new SKColor(color.Red, color.Green, color.Blue, color.Alpha);
-    }
 }

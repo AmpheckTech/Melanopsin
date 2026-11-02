@@ -8,7 +8,7 @@ internal static class ElementMerger {
         ArgumentNullException.ThrowIfNull(current);
         ArgumentNullException.ThrowIfNull(incoming);
         layoutReason = LayoutInvalidationReason.None;
-        var invalidation = current.InlineStyle.CopyFrom(incoming.InlineStyle)
+        var invalidation = current.State.CopyInlineStyleFrom(incoming.State)
             ? InvalidationKind.Layout
             : InvalidationKind.None;
         if (invalidation != InvalidationKind.None) {
@@ -58,6 +58,6 @@ internal static class ElementMerger {
         current.State.ReplaceBindingsFrom(
             incoming.State,
             current,
-            current.IsMounted || current.Parent is not null);
+            current.IsMounted);
     }
 }

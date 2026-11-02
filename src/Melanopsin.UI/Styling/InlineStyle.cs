@@ -1,4 +1,3 @@
-using System.Globalization;
 using Melanopsin.Graphics;
 
 namespace Melanopsin.UI.Styling;
@@ -97,56 +96,33 @@ public sealed class InlineStyle {
         set => Set(ref _alignSelf, value);
     }
 
-    internal bool CopyFrom(InlineStyle source) {
+    /// <summary>
+    /// Overwrites every value from <paramref name="source"/> and reports whether
+    /// anything changed. A null source resets the style to its defaults, which
+    /// is what a rebuild without inline values must do.
+    /// </summary>
+    internal bool CopyFrom(InlineStyle? source) {
         var changed = false;
-        changed |= CopyValue(ref _width, source._width);
-        changed |= CopyValue(ref _height, source._height);
-        changed |= CopyValue(ref _minWidth, source._minWidth);
-        changed |= CopyValue(ref _maxWidth, source._maxWidth);
-        changed |= CopyValue(ref _minHeight, source._minHeight);
-        changed |= CopyValue(ref _maxHeight, source._maxHeight);
-        changed |= CopyValue(ref _flexGrow, source._flexGrow);
-        changed |= CopyValue(ref _flexShrink, source._flexShrink);
-        changed |= CopyValue(ref _weight, source._weight);
-        changed |= CopyValue(ref _order, source._order);
-        changed |= CopyValue(ref _gridRow, source._gridRow);
-        changed |= CopyValue(ref _gridColumn, source._gridColumn);
-        changed |= CopyValue(ref _gridRowSpan, source._gridRowSpan);
-        changed |= CopyValue(ref _gridColumnSpan, source._gridColumnSpan);
-        changed |= CopyValue(ref _alignSelf, source._alignSelf);
+        changed |= CopyValue(ref _width, source?._width);
+        changed |= CopyValue(ref _height, source?._height);
+        changed |= CopyValue(ref _minWidth, source?._minWidth);
+        changed |= CopyValue(ref _maxWidth, source?._maxWidth);
+        changed |= CopyValue(ref _minHeight, source?._minHeight);
+        changed |= CopyValue(ref _maxHeight, source?._maxHeight);
+        changed |= CopyValue(ref _flexGrow, source?._flexGrow);
+        changed |= CopyValue(ref _flexShrink, source?._flexShrink);
+        changed |= CopyValue(ref _weight, source?._weight);
+        changed |= CopyValue(ref _order, source?._order);
+        changed |= CopyValue(ref _gridRow, source?._gridRow);
+        changed |= CopyValue(ref _gridColumn, source?._gridColumn);
+        changed |= CopyValue(ref _gridRowSpan, source?._gridRowSpan);
+        changed |= CopyValue(ref _gridColumnSpan, source?._gridColumnSpan);
+        changed |= CopyValue(ref _alignSelf, source?._alignSelf);
         return changed;
     }
 
     internal bool TrySet(string name, object? value) {
-        var text = value switch {
-            IFormattable formattable => formattable.ToString(
-                format: null,
-                CultureInfo.InvariantCulture),
-            _ => value?.ToString(),
-        };
-        if (!Length.TryParse(text, out var length)) {
-            return false;
-        }
-
         switch (name) {
-            case "width":
-                Width = length;
-                return true;
-            case "height":
-                Height = length;
-                return true;
-            case "min-width":
-                MinWidth = length;
-                return true;
-            case "max-width":
-                MaxWidth = length;
-                return true;
-            case "min-height":
-                MinHeight = length;
-                return true;
-            case "max-height":
-                MaxHeight = length;
-                return true;
             case "flex-grow":
                 FlexGrow = ReadFloat(value);
                 return FlexGrow is not null;
@@ -174,6 +150,47 @@ public sealed class InlineStyle {
             case "align-self":
                 AlignSelf = ReadAlignment(value);
                 return AlignSelf is not null;
+        }
+
+        return value is Length length && TrySetLength(name, length);
+    }
+
+    /// <summary>
+    /// Reports whether a name can be represented by this style. Callers use this
+    /// to avoid allocating a style for attributes owned by a control.
+    /// </summary>
+    internal static bool IsProperty(string name) {
+        return name switch {
+            "flex-grow" or "flex-shrink" or "weight" or "order" or
+            "grid-row" or "grid-column" or "grid-row-span" or
+            "grid-column-span" or "align-self" or "width" or "height" or
+            "min-width" or "max-width" or "min-height" or "max-height" =>
+                true,
+            _ => false,
+        };
+    }
+
+    private bool TrySetLength(string name, Length length) {
+
+        switch (name) {
+            case "width":
+                Width = length;
+                return true;
+            case "height":
+                Height = length;
+                return true;
+            case "min-width":
+                MinWidth = length;
+                return true;
+            case "max-width":
+                MaxWidth = length;
+                return true;
+            case "min-height":
+                MinHeight = length;
+                return true;
+            case "max-height":
+                MaxHeight = length;
+                return true;
             default:
                 return false;
         }
@@ -202,23 +219,13 @@ public sealed class InlineStyle {
             return null;
         }
 
-        if (value is IConvertible convertible) {
-            try {
-                return convertible.ToSingle(CultureInfo.InvariantCulture);
-            } catch (FormatException) {
-                return null;
-            } catch (InvalidCastException) {
-                return null;
-            }
-        }
-
-        return float.TryParse(
-            value.ToString(),
-            NumberStyles.Float,
-            CultureInfo.InvariantCulture,
-            out var parsed)
-            ? parsed
-            : null;
+        return value switch {
+            float number => number,
+            double number => (float)number,
+            decimal number => (float)number,
+            int number => number,
+            _ => null,
+        };
     }
 
     private static int? ReadInteger(object? value) {
@@ -226,23 +233,10 @@ public sealed class InlineStyle {
             return null;
         }
 
-        return int.TryParse(
-            value.ToString(),
-            NumberStyles.Integer,
-            CultureInfo.InvariantCulture,
-            out var parsed)
-            ? parsed
-            : null;
+        return value is int number ? number : null;
     }
 
     private static LayoutAlignment? ReadAlignment(object? value) {
-        return value?.ToString()?.ToLowerInvariant() switch {
-            "auto" => LayoutAlignment.Auto,
-            "start" or "flex-start" => LayoutAlignment.Start,
-            "center" => LayoutAlignment.Center,
-            "end" or "flex-end" => LayoutAlignment.End,
-            "stretch" => LayoutAlignment.Stretch,
-            _ => null,
-        };
+        return value as LayoutAlignment?;
     }
 }

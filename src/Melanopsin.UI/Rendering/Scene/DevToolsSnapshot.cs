@@ -21,6 +21,8 @@ public readonly record struct DevToolsSnapshot(
     int HitRegionCacheMisses,
     int MeasureExecutions,
     int PersistentMeasureHits,
+    int LayoutNodeCount,
+    int HitRegionCount,
     double LayoutMilliseconds,
     double ComposeMilliseconds,
     double RenderMilliseconds,

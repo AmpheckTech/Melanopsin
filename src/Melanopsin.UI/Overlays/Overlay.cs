@@ -59,11 +59,12 @@ public class Overlay : Control {
         base.OnSetAttribute(name, value);
         switch (name) {
             case "modal":
-                IsModal = ControlValueParser.ReadBoolean(value) ?? IsModal;
+                IsModal = value is bool modal ? modal : IsModal;
                 break;
             case "dismiss-on-backdrop":
-                DismissOnBackdrop =
-                    ControlValueParser.ReadBoolean(value) ?? DismissOnBackdrop;
+                DismissOnBackdrop = value is bool dismissOnBackdrop
+                    ? dismissOnBackdrop
+                    : DismissOnBackdrop;
                 break;
         }
     }

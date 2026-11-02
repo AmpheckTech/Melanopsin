@@ -13,7 +13,16 @@ public sealed class RenderFrame {
         DamageRegion? damage = null,
         RenderStatistics? statistics = null) {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(stride);
-        if (pixels.Length < stride * descriptor.Size.Height) {
+        var minimumStride = checked(descriptor.Size.Width * 4);
+        if (stride < minimumStride) {
+            throw new ArgumentOutOfRangeException(
+                nameof(stride),
+                stride,
+                "The stride must cover the full frame width.");
+        }
+
+        var requiredBytes = (long)stride * descriptor.Size.Height;
+        if (pixels.Length < requiredBytes) {
             throw new ArgumentException(
                 "The pixel buffer is smaller than stride multiplied by height.",
                 nameof(pixels));
@@ -24,7 +33,7 @@ public sealed class RenderFrame {
         Stride = stride;
         _pixels = pixels;
         Damage = damage ?? DamageRegion.Full(descriptor.Size);
-        if (!ReferenceEquals(damage, null) && damage.Size != descriptor.Size) {
+        if (damage is not null && damage.Size != descriptor.Size) {
             throw new ArgumentException(
                 "The damage region size does not match the frame.",
                 nameof(damage));
@@ -53,7 +62,7 @@ public sealed class RenderFrame {
         Stride = stride;
         GpuSurface = gpuSurface;
         Damage = damage ?? DamageRegion.Full(descriptor.Size);
-        if (!ReferenceEquals(damage, null) && damage.Size != descriptor.Size) {
+        if (damage is not null && damage.Size != descriptor.Size) {
             throw new ArgumentException(
                 "The damage region size does not match the frame.",
                 nameof(damage));

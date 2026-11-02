@@ -12,7 +12,6 @@ public sealed class OpenGLContainer : Control, IRenderCommandProvider, IDisposab
     private IOpenGLSurface? _surface;
     private byte[]? _softwarePreview;
     private bool _disposed;
-    private Exception? _disposeFailure;
 
     public OpenGLContainer()
         : base("OpenGLContainer") {
@@ -26,12 +25,6 @@ public sealed class OpenGLContainer : Control, IRenderCommandProvider, IDisposab
     /// viewport already matches the control's pixel size.
     /// </summary>
     public Action<int, int>? RenderContent { get; set; }
-
-    /// <summary>
-    /// The failure observed during the most recent disposal. Disposal records
-    /// this value instead of throwing so it cannot mask an active exception.
-    /// </summary>
-    public Exception? LastDisposeFailure => Volatile.Read(ref _disposeFailure);
 
     public void InvalidateContent() {
         Invalidate();
@@ -54,11 +47,12 @@ public sealed class OpenGLContainer : Control, IRenderCommandProvider, IDisposab
             pixels = RenderSoftwarePreview(size);
         }
 
+        var stride = checked(width * 4);
         commands.Add(new DrawImageCommand(
             bounds,
             size,
             RenderPixelFormat.Bgra8888Premultiplied,
-            stride: width * 4,
+            stride,
             pixels,
             context.CornerRadius));
     }
@@ -69,18 +63,10 @@ public sealed class OpenGLContainer : Control, IRenderCommandProvider, IDisposab
         }
 
         _disposed = true;
-        Exception? failure = null;
-        if (_surface is not null) {
-            try {
-                _surface.Dispose();
-            } catch (Exception exception) {
-                failure = exception;
-            }
-        }
-
+        var surface = _surface;
         _surface = null;
         _softwarePreview = null;
-        Volatile.Write(ref _disposeFailure, failure);
+        surface?.Dispose();
     }
 
     protected override void OnUnmounted() {
@@ -90,7 +76,7 @@ public sealed class OpenGLContainer : Control, IRenderCommandProvider, IDisposab
     }
 
     private ReadOnlyMemory<byte> RenderSoftwarePreview(PixelSize size) {
-        var length = size.Width * size.Height * 4;
+        var length = checked(size.Width * size.Height * 4);
         if (_softwarePreview?.Length != length) {
             _softwarePreview = new byte[length];
         }

@@ -5,15 +5,17 @@ namespace Melanopsin.UI.Styling;
 
 public sealed class StyleEngine {
     private readonly StyleSheet _sheet;
+    private CompiledStyleSheet _compiledSheet;
     private UiMetrics _metrics;
-    private StyleDeclarationParser _declarations;
+    private StyleDeclarationApplier _declarations;
     private readonly Dictionary<Node, StyleTransitionState> _transitions = [];
     private readonly Dictionary<Node, CachedStyle> _styleCache = [];
 
     public StyleEngine(StyleSheet? sheet = null, UiMetrics? metrics = null) {
-        _sheet = sheet ?? MaterialStyleSheet.Create();
+        _sheet = sheet ?? new StyleSheet();
+        _compiledSheet = new CompiledStyleSheet(_sheet);
         _metrics = metrics ?? UiMetrics.Default;
-        _declarations = new StyleDeclarationParser(_metrics);
+        _declarations = new StyleDeclarationApplier(_metrics);
     }
 
     public UiMetrics Metrics => _metrics;
@@ -29,7 +31,7 @@ public sealed class StyleEngine {
             _metrics.ScaleFactor != metrics.ScaleFactor ||
             _metrics.RootFontSize != metrics.RootFontSize;
         _metrics = metrics;
-        _declarations = new StyleDeclarationParser(metrics);
+        _declarations = new StyleDeclarationApplier(metrics);
         if (scaleChanged) {
             _styleCache.Clear();
             _transitions.Clear();
@@ -39,9 +41,28 @@ public sealed class StyleEngine {
     public int ActiveTransitionCount => _transitions.Values.Count(
         static transition => !transition.IsComplete);
 
-    public bool StateChangeRequiresLayout(Node node) {
+    internal InvalidationKind GetPendingStyleInvalidation(Node node) {
         ArgumentNullException.ThrowIfNull(node);
-        return StyleSelector.StateChangeRequiresLayout(_sheet, node);
+        ResolvedStyle? before = null;
+        if (_transitions.TryGetValue(node, out var transition)) {
+            before = transition.Current;
+        } else if (_styleCache.TryGetValue(node, out var cached)) {
+            before = cached.PendingTransitionSource is { } source
+                ? ResolvedStyleInterpolator.Interpolate(source, cached.Style, amount: 0)
+                : cached.Style;
+        }
+
+        var after = ResolveTarget(node);
+        if (before is null) {
+            return InvalidationKind.None;
+        }
+
+        return ResolvedStyleComparer.GetInvalidationKind(before, after);
+    }
+
+    internal bool StateChangeRequiresLayout(Node source) {
+        ArgumentNullException.ThrowIfNull(source);
+        return CompiledSheet.StateChangeRequiresLayout(source);
     }
 
     /// <summary>
@@ -51,6 +72,23 @@ public sealed class StyleEngine {
     public ResolvedStyle Resolve(Node node) {
         ArgumentNullException.ThrowIfNull(node);
         return ResolvedStyleInterpolator.Clone(ResolveReadOnly(node));
+    }
+
+    /// <summary>Resolves the paint style of a pseudo-element owned by a node.</summary>
+    internal ResolvedStyle ResolvePseudoElement(
+        Node owner,
+        string pseudoElement,
+        ResolvedStyle initialStyle,
+        IReadOnlySet<string> states) {
+        var style = ResolvedStyleInterpolator.Clone(initialStyle);
+        CompiledSheet.ApplyPseudoElement(
+            owner,
+            pseudoElement,
+            states,
+            _declarations,
+            style);
+
+        return style;
     }
 
     /// <summary>
@@ -70,7 +108,6 @@ public sealed class StyleEngine {
     }
 
     internal ResolvedStyle ResolveReadOnly(Node node) {
-        ArgumentNullException.ThrowIfNull(node);
         var target = ResolveTarget(node);
         if (_transitions.TryGetValue(node, out var transition)) {
             return transition.Current;
@@ -101,7 +138,7 @@ public sealed class StyleEngine {
         }
 
         _styleCache[node] = new CachedStyle(
-            node.StyleRevision,
+            node,
             _sheet.Version,
             _metrics,
             style,
@@ -113,13 +150,12 @@ public sealed class StyleEngine {
         var style = new ResolvedStyle {
             Padding = _metrics.Space(2),
             FontSize = _metrics.Font(UiMetrics.DefaultFontSize),
+            ScrollbarThickness = _metrics.Space(1.5f),
+            ScrollbarMinLength = _metrics.Space(8),
+            ScrollbarInset = _metrics.Space(0.75f),
         };
-        var rules = _sheet.Rules
-            .Where(rule => StyleSelector.Matches(rule.Selector, node))
-            .OrderBy(static rule => rule.Specificity);
-        foreach (var rule in rules) {
-            _declarations.Apply(style, rule.Declarations);
-        }
+        UserAgentStyles.Apply(node, style);
+        CompiledSheet.Apply(node, _declarations, style);
 
         if (node is Element element) {
             _declarations.ApplyInline(style, element);
@@ -211,9 +247,18 @@ public sealed class StyleEngine {
     }
 
     internal void Prune(IReadOnlySet<Node> liveNodes) {
-        ArgumentNullException.ThrowIfNull(liveNodes);
         RemoveStaleEntries(_styleCache, liveNodes);
         RemoveStaleEntries(_transitions, liveNodes);
+    }
+
+    private CompiledStyleSheet CompiledSheet {
+        get {
+            if (_compiledSheet.Version != _sheet.Version) {
+                _compiledSheet = new CompiledStyleSheet(_sheet);
+            }
+
+            return _compiledSheet;
+        }
     }
 
     private static void RemoveStaleEntries<T>(

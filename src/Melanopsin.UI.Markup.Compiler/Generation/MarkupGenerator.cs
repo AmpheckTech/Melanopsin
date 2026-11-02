@@ -3,6 +3,8 @@ using Melanopsin.UI.Markup.Compiler.Diagnostics;
 using Melanopsin.UI.Markup.Compiler.Parsing;
 using Melanopsin.UI.Markup.Compiler.Resources;
 using Melanopsin.UI.Markup.Compiler.Schema;
+using Melanopsin.UI.Markup.Compiler.Schema.Discovery;
+using Melanopsin.UI.Markup.Compiler.Styling;
 using Melanopsin.UI.Markup.Compiler.Syntax;
 using Melanopsin.UI.Markup.Compiler.Validation;
 using Microsoft.CodeAnalysis;
@@ -14,11 +16,13 @@ namespace Melanopsin.UI.Markup.Compiler.Generation;
 public sealed class MarkupGenerator : IIncrementalGenerator {
     public void Initialize(IncrementalGeneratorInitializationContext context) {
         var documents = context.AdditionalTextsProvider
-            .Where(static file => file.Path.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+            .Where(static file => file.Path.EndsWith(".mxml", StringComparison.OrdinalIgnoreCase))
             .Select(static (file, cancellationToken) => {
                 var source = file.GetText(cancellationToken)?.ToString() ?? string.Empty;
                 return MarkupParser.Parse(file.Path, source);
             });
+
+        var collectedDocuments = documents.Collect();
 
         var manifests = context.AdditionalTextsProvider
             .Where(static file => file.Path.EndsWith(".mres", StringComparison.OrdinalIgnoreCase))
@@ -29,8 +33,32 @@ public sealed class MarkupGenerator : IIncrementalGenerator {
             .Collect()
             .Select(static (items, _) => ResourceManifestCatalog.Create(items));
 
-        var controls = context.CompilationProvider.Select(static (compilation, cancellationToken) =>
-            ControlCatalog.Create(compilation, cancellationToken));
+        // Components that live entirely in markup are not part of the compilation yet, so they are
+        // mirrored into throwaway syntax trees before the schema is discovered.
+        var controls = context.CompilationProvider.Combine(collectedDocuments)
+            .Select(static (input, cancellationToken) => {
+                var shadows = MarkupComponentShadow.CreateAll(input.Right, input.Left);
+                var compilation = shadows.Count == 0
+                    ? input.Left
+                    : input.Left.AddSyntaxTrees(shadows);
+                return ControlCatalog.Create(compilation, cancellationToken);
+            });
+
+        var stylesheets = context.AdditionalTextsProvider
+            .Where(static file => file.Path.EndsWith(".css", StringComparison.OrdinalIgnoreCase))
+            .Select(static (file, cancellationToken) => {
+                var source = file.GetText(cancellationToken)?.ToString() ?? string.Empty;
+                return CssParser.Parse(file.Path, source);
+            })
+            .Collect()
+            .Select(static (items, _) => CssStylesheetCatalog.Create(items));
+
+        var rootNamespace = context.AnalyzerConfigOptionsProvider.Select(
+            static (provider, _) => provider.GlobalOptions.TryGetValue(
+                "build_property.RootNamespace",
+                out var value)
+                ? value
+                : string.Empty);
 
         context.RegisterSourceOutput(controls, static (productionContext, catalog) => {
             foreach (var diagnostic in catalog.Diagnostics) {
@@ -46,6 +74,11 @@ public sealed class MarkupGenerator : IIncrementalGenerator {
         });
 
         context.RegisterSourceOutput(
+            stylesheets.Combine(rootNamespace),
+            static (productionContext, input) =>
+                EmitStylesheet(productionContext, input.Left, input.Right));
+
+        context.RegisterSourceOutput(
             documents.Combine(manifests).Combine(controls).Combine(context.CompilationProvider),
             static (productionContext, input) =>
                 Execute(
@@ -54,6 +87,32 @@ public sealed class MarkupGenerator : IIncrementalGenerator {
                     input.Left.Left.Right,
                     input.Left.Right,
                     input.Right));
+    }
+
+    private static void EmitStylesheet(
+        SourceProductionContext context,
+        CssStylesheetCatalog catalog,
+        string rootNamespace) {
+        foreach (var entry in catalog.Entries) {
+            var stylesheet = entry.Stylesheet;
+            var emission = CssEmitter.Emit(stylesheet, rootNamespace, entry.Imports);
+            foreach (var diagnostic in emission.Diagnostics.Concat(entry.Diagnostics)) {
+                context.ReportDiagnostic(Diagnostic.Create(
+                    MarkupDiagnosticDescriptors.ForCode(diagnostic.Code),
+                    CreateLocation(
+                        stylesheet.Path,
+                        stylesheet.Source,
+                        diagnostic.Offset,
+                        diagnostic.Length),
+                    diagnostic.Message));
+            }
+
+            if (entry.IsValid && emission.Source is not null) {
+                context.AddSource(
+                    emission.HintName,
+                    SourceText.From(emission.Source, System.Text.Encoding.UTF8));
+            }
+        }
     }
 
     private static void EmitResourceManifests(
@@ -109,7 +168,10 @@ public sealed class MarkupGenerator : IIncrementalGenerator {
             return;
         }
 
-        var source = MarkupEmitter.Emit(document, controls, resources);
+        var className = MarkupNaming.ComponentClassName(document);
+        var declaresComponent = compilation.GetTypeByMetadataName(
+            $"{document.Namespace}.{className}") is null;
+        var source = MarkupEmitter.Emit(document, controls, resources, declaresComponent);
         context.AddSource(HintName(document), SourceText.From(source, System.Text.Encoding.UTF8));
     }
 

@@ -11,8 +11,10 @@
     <Project Path="src/Melanopsin.Reactive/Melanopsin.Reactive.csproj" />
     <Project Path="src/Melanopsin.UI.Markup.Compiler/Melanopsin.UI.Markup.Compiler.csproj" />
     <Project Path="src/Melanopsin.UI.DevTools/Melanopsin.UI.DevTools.csproj" />
+    <Project Path="src/Melanopsin.UI.LanguageServer/Melanopsin.UI.LanguageServer.csproj" />
     <Project Path="src/Melanopsin.UI.OpenGL/Melanopsin.UI.OpenGL.csproj" />
     <Project Path="src/Melanopsin.UI/Melanopsin.UI.csproj" />
+    <Project Path="src/Melanopsin.UI.Desktop/Melanopsin.UI.Desktop.csproj" />
     <Project Path="src/Melanopsin.UI.Controls/Melanopsin.UI.Controls.csproj" />
   </Folder>
   <Folder Name="/src/Melanopsin.Graphics.Backend/">

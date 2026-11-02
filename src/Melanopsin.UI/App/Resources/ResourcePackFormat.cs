@@ -7,6 +7,7 @@ internal static class ResourcePackFormat {
     public const int MaxResources = 65_536;
     public const int MaxValuesPerResource = 65_536;
     public const int MaxTextBytes = 1_048_576;
+    public const long MaxTotalTextBytes = 32L * 1024 * 1024;
     public const int MaxBlobBytes = 256 * 1024 * 1024;
     public const int MaxTotalValues = 1_048_576;
     public const long MaxTotalBlobBytes = 512L * 1024 * 1024;

@@ -61,10 +61,14 @@ internal sealed class HarfBuzzGlyphShaper : IDisposable {
                 consumed = 1;
             }
 
-            var font = IsDefaultIgnorable(rune) && segmentFont is not null
+            var continuesSegment = ContinuesSegment(rune) && segmentFont is not null;
+            var font = continuesSegment
                 ? segmentFont
-                : ResolveFont(rune, preferredFont);
-            var direction = IsDefaultIgnorable(rune) && segmentFont is not null
+                : ResolveFont(
+                    rune,
+                    preferredFont,
+                    EmojiPresentation.RequestsEmojiPresentation(text, index));
+            var direction = continuesSegment
                 ? segmentDirection
                 : TextDirectionResolver.ResolveRune(
                     rune,
@@ -198,10 +202,17 @@ internal sealed class HarfBuzzGlyphShaper : IDisposable {
             glyphs);
     }
 
-    private FontFace ResolveFont(Rune rune, FontFace? preferredFont) {
-        return preferredFont is not null && preferredFont.GetGlyphId(rune) != 0
-            ? preferredFont
-            : _fonts.Resolve(rune);
+    private FontFace ResolveFont(
+        Rune rune,
+        FontFace? preferredFont,
+        bool preferEmoji) {
+        if (preferredFont is not null &&
+            preferredFont.GetGlyphId(rune) != 0 &&
+            (!preferEmoji || preferredFont.HasColorGlyphs)) {
+            return preferredFont;
+        }
+
+        return _fonts.Resolve(rune, preferEmoji);
     }
 
     private HarfBuzzFont GetNativeFont(FontFace fontFace) {
@@ -214,14 +225,31 @@ internal sealed class HarfBuzzGlyphShaper : IDisposable {
         return native;
     }
 
-    private static bool IsDefaultIgnorable(Rune rune) {
+    /// <summary>
+    /// Characters that modify the character before them and must stay in the
+    /// same run: the Unicode <c>Default_Ignorable_Code_Point</c> set plus
+    /// enclosing marks such as the keycap of an emoji sequence.
+    /// </summary>
+    private static bool ContinuesSegment(Rune rune) {
         return rune.Value is
-            0x00AD or 0x034F or 0x061C or 0x115F or 0x1160 or
-            0x17B4 or 0x17B5 or 0x180B or 0x180C or 0x180D or
-            0x180E or 0x180F or 0x200B or 0x200C or 0x200D or
-            0x200E or 0x200F or 0x202A or 0x202B or 0x202C or
-            0x202D or 0x202E or 0x2060 or 0x2061 or 0x2062 or
-            0x2063 or 0x2064 or 0xFE00 or 0xFE0F or 0xFEFF or
-            >= 0xE0100 and <= 0xE01EF;
+            0x00AD or
+            0x034F or
+            0x061C or
+            0x115F or
+            0x1160 or
+            0x17B4 or
+            0x17B5 or
+            >= 0x180B and <= 0x180F or
+            >= 0x200B and <= 0x200F or
+            >= 0x202A and <= 0x202E or
+            >= 0x2060 and <= 0x206F or
+            0x3164 or
+            >= 0xFE00 and <= 0xFE0F or
+            0xFEFF or
+            0xFFA0 or
+            >= 0x1BCA0 and <= 0x1BCA3 or
+            >= 0x1D173 and <= 0x1D17A or
+            >= 0xE0000 and <= 0xE01EF or
+            >= 0x20DD and <= 0x20E4;
     }
 }

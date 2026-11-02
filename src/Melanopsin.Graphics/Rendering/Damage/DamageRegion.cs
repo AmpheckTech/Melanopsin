@@ -9,6 +9,16 @@ public sealed class DamageRegion {
         ArgumentNullException.ThrowIfNull(rects);
         Size = size;
         _rects = [.. rects];
+        foreach (var rectangle in _rects) {
+            if (rectangle.X < 0 ||
+                rectangle.Y < 0 ||
+                (long)rectangle.X + rectangle.Width > size.Width ||
+                (long)rectangle.Y + rectangle.Height > size.Height) {
+                throw new ArgumentException(
+                    "Damage rectangles must be contained by the region.",
+                    nameof(rects));
+            }
+        }
     }
 
     public PixelSize Size { get; }

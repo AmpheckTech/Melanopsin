@@ -1,4 +1,8 @@
 <Project>
+  <PropertyGroup>
+    <CompilerGeneratedFilesOutputPath>$(IntermediateOutputPath)generated</CompilerGeneratedFilesOutputPath>
+  </PropertyGroup>
+
   <Import Project="$(MSBuildThisFileDirectory)tools/Melanopsin.UI.ResourceCompiler/Melanopsin.Resources.targets"
           Condition="Exists('$(MSBuildThisFileDirectory)tools/Melanopsin.UI.ResourceCompiler/Melanopsin.Resources.targets')" />
 </Project>

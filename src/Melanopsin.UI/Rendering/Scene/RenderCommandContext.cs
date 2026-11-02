@@ -1,3 +1,5 @@
+using Melanopsin.UI.Styling;
+
 namespace Melanopsin.UI.Rendering;
 
 public readonly record struct RenderCommandContext {
@@ -8,7 +10,8 @@ public readonly record struct RenderCommandContext {
         float fontSize,
         float padding,
         FontFace? font = null,
-        ITextLayout? textLayout = null) {
+        ITextLayout? textLayout = null,
+        StyleEngine? styles = null) {
         ArgumentOutOfRangeException.ThrowIfNegative(cornerRadius);
         ArgumentOutOfRangeException.ThrowIfNegative(fontSize);
         ArgumentOutOfRangeException.ThrowIfNegative(padding);
@@ -19,6 +22,7 @@ public readonly record struct RenderCommandContext {
         Padding = padding;
         Font = font;
         TextLayout = textLayout;
+        Styles = styles;
     }
 
     public Rect Bounds { get; }
@@ -34,6 +38,8 @@ public readonly record struct RenderCommandContext {
     public FontFace? Font { get; }
 
     public ITextLayout? TextLayout { get; }
+
+    public StyleEngine? Styles { get; }
 
     public void AppendText(
         List<RenderCommand> commands,

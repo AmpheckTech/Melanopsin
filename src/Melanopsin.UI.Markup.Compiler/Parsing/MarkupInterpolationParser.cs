@@ -13,33 +13,11 @@ internal sealed class MarkupInterpolationParser {
         _report = report;
     }
 
-    public string ParseExpression(string value, int offset, string description) {
-        var trimmed = value.Trim();
-        if (!trimmed.StartsWith("{{", StringComparison.Ordinal)) {
-            ReportInvalidExpression(
-                $"{description} must be an expression enclosed in {{{{ }}}}.",
-                offset);
-            return string.Empty;
-        }
-
-        var end = FindInterpolationEnd(trimmed, start: 2);
-        if (end != trimmed.Length - 2) {
-            ReportInvalidExpression(
-                $"{description} must contain exactly one expression enclosed in {{{{ }}}}.",
-                offset);
-            return string.Empty;
-        }
-
-        var expression = trimmed.Substring(2, end - 2).Trim();
-        if (expression.Length == 0) {
-            ReportInvalidExpression($"{description} cannot be empty.", offset);
-        }
-
-        return expression;
-    }
-
+    /// <summary>Splits an attribute value into literals, interpolations and resource references.</summary>
+    /// <param name="value">The value the XML reader reported.</param>
+    /// <param name="offset">Where the value starts in the document, or <c>-1</c> when it cannot be located.</param>
     public IReadOnlyList<MarkupValuePart> ParseAttribute(string value, int offset) {
-        var resourceMarker = value.IndexOf("{m:res", StringComparison.Ordinal);
+        var resourceMarker = value.IndexOf("{res", StringComparison.Ordinal);
         if (resourceMarker >= 0) {
             return ParseResourceAttribute(value, offset, resourceMarker);
         }
@@ -52,14 +30,16 @@ internal sealed class MarkupInterpolationParser {
             if (interpolation < 0) {
                 parts.Add(new MarkupValuePart(
                     value.Substring(cursor),
-                    MarkupValuePartKind.Literal));
+                    MarkupValuePartKind.Literal,
+                    MapOffset(offset, cursor)));
                 break;
             }
 
             if (interpolation > cursor) {
                 parts.Add(new MarkupValuePart(
                     value.Substring(cursor, interpolation - cursor),
-                    MarkupValuePartKind.Literal));
+                    MarkupValuePartKind.Literal,
+                    MapOffset(offset, cursor)));
             }
 
             var expressionStart = interpolation + 2;
@@ -68,27 +48,32 @@ internal sealed class MarkupInterpolationParser {
                 _report(new MarkupDiagnostic(
                     MarkupDiagnosticCodes.InvalidSyntax,
                     "Unterminated attribute interpolation.",
-                    offset + interpolation,
+                    Math.Max(0, offset) + interpolation,
                     2));
                 parts.Add(new MarkupValuePart(
                     value.Substring(interpolation),
-                    MarkupValuePartKind.Literal));
+                    MarkupValuePartKind.Literal,
+                    MapOffset(offset, interpolation)));
                 break;
             }
 
-            var expression = value.Substring(expressionStart, expressionEnd - expressionStart).Trim();
+            var raw = value.Substring(expressionStart, expressionEnd - expressionStart);
+            var expression = raw.Trim();
             if (expression.Length == 0) {
                 ReportInvalidExpression(
                     "An interpolation expression cannot be empty.",
-                    offset + interpolation);
+                    Math.Max(0, offset) + interpolation);
             }
 
-            parts.Add(new MarkupValuePart(expression, MarkupValuePartKind.Expression));
+            parts.Add(new MarkupValuePart(
+                expression,
+                MarkupValuePartKind.Expression,
+                MapOffset(offset, expressionStart + LeadingWhitespace(raw))));
             cursor = expressionEnd + 2;
         }
 
         if (parts.Count == 0) {
-            parts.Add(new MarkupValuePart(string.Empty, MarkupValuePartKind.Literal));
+            parts.Add(new MarkupValuePart(string.Empty, MarkupValuePartKind.Literal, MapOffset(offset, 0)));
         }
 
         return parts;
@@ -100,25 +85,25 @@ internal sealed class MarkupInterpolationParser {
         int markerOffset) {
         var trimmed = value.Trim();
         var leadingWhitespace = value.Length - value.TrimStart().Length;
-        if (!trimmed.StartsWith("{m:res ", StringComparison.Ordinal) ||
+        if (!trimmed.StartsWith("{res ", StringComparison.Ordinal) ||
             !trimmed.EndsWith("}", StringComparison.Ordinal)) {
             ReportInvalidResourceReference(
-                "A resource reference must use exactly {m:res Category.Name}.",
-                offset + leadingWhitespace + markerOffset);
-            return [new MarkupValuePart(value, MarkupValuePartKind.Literal)];
+                "A resource reference must use exactly {res Category.Name}.",
+                Math.Max(0, offset) + leadingWhitespace + markerOffset);
+            return [new MarkupValuePart(value, MarkupValuePartKind.Literal, offset)];
         }
 
         var referenceText = trimmed.Substring(
-            "{m:res ".Length,
-            trimmed.Length - "{m:res ".Length - 1).Trim();
+            "{res ".Length,
+            trimmed.Length - "{res ".Length - 1).Trim();
         if (!ResourceReference.TryParse(referenceText, out var reference)) {
             ReportInvalidResourceReference(
-                "A resource reference must use exactly {m:res Category.Name}.",
-                offset + leadingWhitespace + markerOffset);
-            return [new MarkupValuePart(value, MarkupValuePartKind.Literal)];
+                "A resource reference must use exactly {res Category.Name}.",
+                Math.Max(0, offset) + leadingWhitespace + markerOffset);
+            return [new MarkupValuePart(value, MarkupValuePartKind.Literal, offset)];
         }
 
-        return [new MarkupValuePart(reference.Id, MarkupValuePartKind.Resource)];
+        return [new MarkupValuePart(reference.Id, MarkupValuePartKind.Resource, MapOffset(offset, leadingWhitespace))];
     }
 
     private void ReportInvalidResourceReference(string message, int offset) {
@@ -126,7 +111,7 @@ internal sealed class MarkupInterpolationParser {
             MarkupDiagnosticCodes.InvalidResourceReference,
             message,
             offset,
-            "{m:res".Length));
+            "{res".Length));
     }
 
     public void ParseText(List<MarkupNode> nodes, string text, int offset) {
@@ -162,9 +147,27 @@ internal sealed class MarkupInterpolationParser {
                     offset + interpolation);
             }
 
-            nodes.Add(new MarkupExpression(offset + interpolation, expression));
+            nodes.Add(new MarkupExpression(
+                offset + interpolation,
+                offset + expressionStart + LeadingWhitespace(
+                    text.Substring(expressionStart, expressionEnd - expressionStart)),
+                expression));
             cursor = expressionEnd + 2;
         }
+    }
+
+    /// <summary>The offset a substring starts at, or <c>-1</c> for a document-less value.</summary>
+    private static int MapOffset(int baseOffset, int relative) {
+        return baseOffset < 0 ? -1 : baseOffset + relative;
+    }
+
+    private static int LeadingWhitespace(string value) {
+        var index = 0;
+        while (index < value.Length && char.IsWhiteSpace(value[index])) {
+            index++;
+        }
+
+        return index;
     }
 
     private void ReportInvalidExpression(string message, int offset) {

@@ -89,7 +89,7 @@ internal sealed unsafe partial class WaylandShmBufferPool : IDisposable {
         int width,
         int height,
         int stride) {
-        var size = checked(stride * height);
+        var size = checked((int)((long)stride * height));
         var fd = LibcNative.MemfdCreate("melanopsin-shm", MfdCloseOnExec);
         if (fd < 0) {
             throw new InvalidOperationException(
@@ -197,47 +197,20 @@ internal sealed unsafe partial class WaylandShmBufferPool : IDisposable {
         public bool IsReserved { get; private set; }
 
         internal void Reserve() {
-            ObjectDisposedException.ThrowIf(_disposed, this);
-            if (IsReserved || IsInUse) {
-                throw new InvalidOperationException(
-                    "The Wayland shared-memory buffer is already in use.");
-            }
-
             IsReserved = true;
         }
 
         internal void ReleaseReservation() {
-            if (!IsReserved) {
-                return;
-            }
-
             IsReserved = false;
         }
 
         internal void Commit(ReadOnlySpan<byte> pixels) {
-            ObjectDisposedException.ThrowIf(_disposed, this);
-            if (!IsReserved || IsInUse) {
-                throw new InvalidOperationException(
-                    "The Wayland shared-memory buffer was not reserved.");
-            }
-
-            var byteCount = checked(Stride * Height);
-            if (pixels.Length < byteCount || byteCount > _size) {
-                throw new ArgumentException(
-                    "The pixel buffer is smaller than the Wayland buffer.",
-                    nameof(pixels));
-            }
-
-            pixels[..byteCount].CopyTo(new Span<byte>((void*)_data, byteCount));
+            pixels[.._size].CopyTo(new Span<byte>((void*)_data, _size));
             IsReserved = false;
             IsInUse = true;
         }
 
         internal void AbortCommit() {
-            if (_disposed || (!IsReserved && !IsInUse)) {
-                return;
-            }
-
             IsReserved = false;
             IsInUse = false;
             _owner.OnBufferReleased();

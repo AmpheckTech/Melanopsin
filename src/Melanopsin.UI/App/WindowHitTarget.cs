@@ -34,6 +34,14 @@ public sealed class WindowHitTarget {
         return y + GetAncestorScrollOffsetY();
     }
 
+    internal float ToLayoutX(float x, Node currentTarget) {
+        return x + GetScrollOffsetX(currentTarget);
+    }
+
+    internal float ToLayoutY(float y, Node currentTarget) {
+        return y + GetScrollOffsetY(currentTarget);
+    }
+
     private float GetAncestorScrollOffsetX() {
         var offsetX = 0f;
         foreach (var node in Route) {
@@ -53,6 +61,36 @@ public sealed class WindowHitTarget {
         var offsetY = 0f;
         foreach (var node in Route) {
             if (ReferenceEquals(node, Node)) {
+                break;
+            }
+
+            if (node is IScrollTransform scrollTransform) {
+                offsetY += scrollTransform.OffsetY;
+            }
+        }
+
+        return offsetY;
+    }
+
+    private float GetScrollOffsetX(Node currentTarget) {
+        var offsetX = 0f;
+        foreach (var node in Route) {
+            if (ReferenceEquals(node, currentTarget)) {
+                break;
+            }
+
+            if (node is IScrollTransform scrollTransform) {
+                offsetX += scrollTransform.OffsetX;
+            }
+        }
+
+        return offsetX;
+    }
+
+    private float GetScrollOffsetY(Node currentTarget) {
+        var offsetY = 0f;
+        foreach (var node in Route) {
+            if (ReferenceEquals(node, currentTarget)) {
                 break;
             }
 

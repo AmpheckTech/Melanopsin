@@ -9,6 +9,7 @@
     <Deterministic>true</Deterministic>
     <UseArtifactsOutput>true</UseArtifactsOutput>
     <ArtifactsPath>$(MSBuildThisFileDirectory)build</ArtifactsPath>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
 
   <Import Project="$(MSBuildThisFileDirectory)tools/Melanopsin.UI.ResourceCompiler/Melanopsin.Resources.props"

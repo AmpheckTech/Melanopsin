@@ -4,11 +4,8 @@ namespace Melanopsin.UI.App;
 
 /// <summary>
 /// Resolves a resource contract through a base provider and named overlays.
-/// Overlays may only replace values for keys declared by the base contract.
-/// A new overlay is appended above existing overlays. Replacing an overlay by name
-/// keeps its position so layer identity and priority remain predictable.
-/// Resolution participates in the reactive dependency graph, so a culture or
-/// overlay change refreshes bindings without rebuilding the element tree.
+/// Overlays may only replace keys the base declares; replacing one by name keeps
+/// its position. Resolution participates in the reactive dependency graph.
 /// </summary>
 public sealed class ResourceResolver : ResourceProvider {
     private readonly object _gate = new();
@@ -111,21 +108,15 @@ public sealed class ResourceResolver : ResourceProvider {
         ValidateOverlay(overlay);
 
         lock (_gate) {
-            if (!_overlays.ContainsKey(name)) {
-                _overlayOrder.Add(name);
-            }
-
-            _overlays[name] = overlay;
+            SetOverlayCore(name, overlay);
         }
 
         NotifyChanged();
     }
 
     /// <summary>
-    /// Opens a resource pack and makes it available to this resolver. The first
-    /// opened pack becomes the base provider; later packs are overlays in open
-    /// order. An explicit name replaces an existing overlay without changing its
-    /// priority.
+    /// Opens a pack. The first becomes the base provider; later packs are overlays
+    /// in open order, and an explicit name replaces an overlay in place.
     /// </summary>
     public ResourcePack Open(
         ResourceStorage storage,
@@ -140,12 +131,7 @@ public sealed class ResourceResolver : ResourceProvider {
             if (_baseProvider is null) {
                 _baseProvider = pack;
             } else {
-                var name = overlayName ?? storage.DisplayName;
-                if (!_overlays.ContainsKey(name)) {
-                    _overlayOrder.Add(name);
-                }
-
-                _overlays[name] = pack;
+                SetOverlayCore(overlayName ?? storage.DisplayName, pack);
             }
         }
 
@@ -176,6 +162,14 @@ public sealed class ResourceResolver : ResourceProvider {
 
     private void ValidateOverlay(ResourceProvider overlay) {
         _contract.ValidateProvider(overlay, nameof(overlay));
+    }
+
+    private void SetOverlayCore(string name, ResourceProvider overlay) {
+        if (_overlays.TryAdd(name, overlay)) {
+            _overlayOrder.Add(name);
+        } else {
+            _overlays[name] = overlay;
+        }
     }
 
     private void NotifyChanged() {

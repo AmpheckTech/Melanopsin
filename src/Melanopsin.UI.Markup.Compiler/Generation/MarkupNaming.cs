@@ -5,7 +5,7 @@ namespace Melanopsin.UI.Markup.Compiler.Generation;
 
 internal static class MarkupNaming {
     public static string ComponentClassName(MarkupDocument document) {
-        return document.ClassName ?? FromFileStem(document.Path);
+        return document.ComponentName ?? FromFileStem(document.Path);
     }
 
     private static string FromFileStem(string path) {

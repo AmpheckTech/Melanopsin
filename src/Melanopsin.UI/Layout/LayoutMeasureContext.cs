@@ -55,7 +55,7 @@ public sealed class LayoutMeasureContext {
         float fallback) {
         var available = constraints.HasBoundedWidth
             ? constraints.MaxWidth
-            : fallback;
+            : constraints.WidthReference ?? fallback;
         return constraints.ConstrainWidth(_engine.ResolveLength(
             style.Width,
             style.MinWidth,
@@ -72,7 +72,7 @@ public sealed class LayoutMeasureContext {
         float fallback) {
         var available = constraints.HasBoundedHeight
             ? constraints.MaxHeight
-            : fallback;
+            : constraints.HeightReference ?? fallback;
         return constraints.ConstrainHeight(_engine.ResolveLength(
             style.Height,
             style.MinHeight,

@@ -127,10 +127,10 @@ public sealed class CheckBox :
         base.OnSetAttribute(name, value);
         switch (name) {
             case "text":
-                Text = value?.ToString() ?? string.Empty;
+                Text = value as string ?? string.Empty;
                 break;
             case "checked":
-                IsChecked = ControlValueParser.ReadBoolean(value) ?? false;
+                IsChecked = value is bool isChecked && isChecked;
                 Accessibility.Value = IsChecked ? "checked" : "unchecked";
                 break;
         }

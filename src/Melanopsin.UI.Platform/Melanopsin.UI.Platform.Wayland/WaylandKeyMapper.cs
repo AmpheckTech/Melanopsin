@@ -6,6 +6,17 @@ namespace Melanopsin.UI.Platform.Wayland;
 /// Maps XKB keysyms to platform-neutral input keys.
 /// </summary>
 public static class WaylandKeyMapper {
+    public static Key MapEvdevKeyCode(uint keycode) {
+        return keycode switch {
+            >= 59 and <= 68 => (Key)((int)Key.F1 + (int)keycode - 59),
+            87 => Key.F11,
+            88 => Key.F12,
+            >= 183 and <= 194 =>
+                (Key)((int)Key.F13 + (int)keycode - 183),
+            _ => Key.Unknown,
+        };
+    }
+
     public static Key MapKeySym(uint keysym) {
         return keysym switch {
             >= 0x41 and <= 0x5A => (Key)((int)Key.A + (int)keysym - 0x41),

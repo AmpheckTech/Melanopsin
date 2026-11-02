@@ -18,10 +18,11 @@ public sealed class DevToolsController : IDisposable {
     public DevToolsController(Application application) {
         ArgumentNullException.ThrowIfNull(application);
         _windows = application.Windows;
-        DevToolsStyles.Install(_windows.Styles);
+        DevToolsStyles.AddTo(_windows.Styles.Sheet);
         _windows.WindowCreated += OnWindowCreated;
         _windows.WindowClosed += OnWindowClosed;
         _component.WindowSelected += SelectWindow;
+        _component.DebugBoundsChanged += OnDebugBoundsChanged;
         RefreshWindows();
     }
 
@@ -31,7 +32,7 @@ public sealed class DevToolsController : IDisposable {
 
     public WindowId? SelectedWindowId => _selectedWindowId;
 
-    public int WindowCount => _observed.Count + (_window is null ? 0 : 1);
+    public int WindowCount => _observed.Count;
 
     public int TabCount => _component.Windows.Count;
 
@@ -51,7 +52,7 @@ public sealed class DevToolsController : IDisposable {
         try {
             _window = _windows.CreateWindow(new WindowOptions {
                 Title = "Melanopsin DevTools",
-                Size = new PixelSize(720, 520),
+                Size = new PixelSize(1440, 900),
             });
             _window.Root = new ComponentHost(_component);
         } finally {
@@ -81,13 +82,25 @@ public sealed class DevToolsController : IDisposable {
     }
 
     public void SelectWindow(WindowId windowId) {
-        if (_window is null) {
+        if (_window is null || !_observed.TryGetValue(windowId, out _)) {
             return;
         }
 
         _selectedWindowId = windowId;
         RefreshWindows();
         UpdateSelectedWindow();
+    }
+
+    /// <summary>
+    /// Enables or disables layout-box outlines on the selected target window.
+    /// </summary>
+    public void SetDebugBounds(bool enabled) {
+        if (_selectedWindowId is { } selected &&
+            _observed.TryGetValue(selected, out var window)) {
+            window.SetShowDebugBounds(enabled);
+        }
+
+        _component.SetDebugBounds(enabled);
     }
 
     public void Dispose() {
@@ -106,6 +119,7 @@ public sealed class DevToolsController : IDisposable {
         _windows.WindowCreated -= OnWindowCreated;
         _windows.WindowClosed -= OnWindowClosed;
         _component.WindowSelected -= SelectWindow;
+        _component.DebugBoundsChanged -= OnDebugBoundsChanged;
         foreach (var window in _observed.Values) {
             window.DiagnosticsChanged -= OnDiagnosticsChanged;
         }
@@ -164,9 +178,8 @@ public sealed class DevToolsController : IDisposable {
             }
         }
 
-        if (_selectedWindowId is null ||
-            _selectedWindowId != _window?.Id &&
-            !_observed.ContainsKey(_selectedWindowId.Value)) {
+        if (_selectedWindowId is not { } selected ||
+            !_observed.ContainsKey(selected)) {
             _selectedWindowId = _observed.Keys.FirstOrDefault();
         }
 
@@ -179,16 +192,11 @@ public sealed class DevToolsController : IDisposable {
                 window.Id,
                 window.Title,
                 window.Id == _selectedWindowId
-                    ? "devtools-tab devtools-tab-selected"
-                    : "devtools-tab"))
+                    ? "tab selected"
+                    : "tab"))
             .ToList();
-        tabs.Add(new DevToolsWindowInfo(
-            _window.Id,
-            _window.Title,
-            _window.Id == _selectedWindowId
-                ? "devtools-tab devtools-tab-selected"
-                : "devtools-tab"));
         _component.SetWindows(tabs, _selectedWindowId);
+        SyncDebugBounds();
     }
 
     private void UpdateSelectedWindow() {
@@ -198,9 +206,11 @@ public sealed class DevToolsController : IDisposable {
 
         if (_selectedWindowId == _window.Id) {
             _component.ClearSnapshot();
+            _component.SetDebugBounds(false);
             return;
         }
 
+        SyncDebugBounds();
         if (_selectedWindowId is { } selected &&
             _snapshots.TryGetValue(selected, out var snapshot)) {
             _lastDiagnosticsUpdate = Environment.TickCount64;
@@ -208,5 +218,14 @@ public sealed class DevToolsController : IDisposable {
         } else {
             _component.ClearSnapshot();
         }
+    }
+
+    private void OnDebugBoundsChanged(bool enabled) => SetDebugBounds(enabled);
+
+    private void SyncDebugBounds() {
+        _component.SetDebugBounds(
+            _selectedWindowId is { } selected &&
+            _observed.TryGetValue(selected, out var window) &&
+            window.ShowDebugBounds);
     }
 }

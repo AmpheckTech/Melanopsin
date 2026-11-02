@@ -31,9 +31,8 @@ public static class ReactiveRuntime {
 
     /// <summary>
     /// Starts dependency tracking and invokes <paramref name="sourceTracked"/>
-    /// the first time each source is read in the scope. Consumers that maintain
-    /// subscriptions can use the callback to subscribe before the source value
-    /// is observed, avoiding a lost-invalidation window during their first run.
+    /// the first time each source is read, so consumers can subscribe before the
+    /// first value is observed.
     /// </summary>
     public static IDisposable Track(
         HashSet<IReactiveSource> dependencies,

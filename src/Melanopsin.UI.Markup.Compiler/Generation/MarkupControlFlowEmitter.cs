@@ -19,7 +19,10 @@ internal sealed class MarkupControlFlowEmitter {
         string? reconciliationKey) {
         _nodes.AppendLine(
             indent,
-            $"if ({MarkupValueEmitter.Parenthesize(conditional.Condition)}) {{");
+            CodeFragment.Text("if (")
+                .Add(CodeFragment.Parenthesize(
+                    CodeFragment.Source(conditional.Condition, conditional.ConditionOffset)))
+                .Add(") {"));
         for (var index = 0; index < conditional.WhenTrue.Count; index++) {
             _nodes.Emit(
                 conditional.WhenTrue[index],
@@ -62,32 +65,57 @@ internal sealed class MarkupControlFlowEmitter {
 
         _nodes.AppendLine(
             indent,
-            $"foreach (var {loop.Variable} in " +
-            $"{MarkupValueEmitter.Parenthesize(loop.Iterable)}) {{");
+            CodeFragment.Text($"foreach (var {loop.Variable} in ")
+                .Add(CodeFragment.Parenthesize(
+                    CodeFragment.Source(loop.Iterable, loop.IterableOffset)))
+                .Add(") {"));
 
-        var fragmentVariable = _nodes.NextVariable("__melanopsinFragment");
-        _nodes.AppendLine(
-            indent + 1,
-            $"var {fragmentVariable} = new global::Melanopsin.UI.Fragment();");
-        _nodes.AppendLine(
-            indent + 1,
-            $"{fragmentVariable}.ReconciliationSlot = {loop.Offset};");
-        if (loop.Track is { Length: > 0 }) {
+        // A single element body reconciles directly against the loop's parent, so
+        // the iteration does not need a Fragment to group its roots.
+        var singleRoot = loop.Body.Count == 1
+            ? loop.Body[0] as MarkupElement
+            : null;
+        if (singleRoot is not null) {
+            var rootVariable = _nodes.Emit(
+                singleRoot,
+                indent + 1,
+                parentVariable,
+                reconciliationKey: null);
+            if (loop.Track is { Length: > 0 } && rootVariable is not null) {
+                _nodes.AppendLine(
+                    indent + 1,
+                    CodeFragment.Text($"{rootVariable}.ReconciliationKey = (object?)")
+                        .Add(CodeFragment.Parenthesize(
+                            CodeFragment.Source(loop.Track, loop.TrackOffset)))
+                        .Add(";"));
+            }
+        } else {
+            var fragmentVariable = _nodes.NextVariable("__melanopsinFragment");
             _nodes.AppendLine(
                 indent + 1,
-                $"{fragmentVariable}.ReconciliationKey = (object?)" +
-                $"({loop.Track});");
-        }
-
-        _nodes.AppendLine(
-            indent + 1,
-            $"{parentVariable}.AppendChild({fragmentVariable});");
-        foreach (var child in loop.Body) {
-            _nodes.Emit(
-                child,
+                $"var {fragmentVariable} = new global::Melanopsin.UI.Fragment();");
+            _nodes.AppendLine(
                 indent + 1,
-                fragmentVariable,
-                reconciliationKey: null);
+                $"{fragmentVariable}.ReconciliationSlot = {loop.Offset};");
+            if (loop.Track is { Length: > 0 }) {
+                _nodes.AppendLine(
+                    indent + 1,
+                    CodeFragment.Text($"{fragmentVariable}.ReconciliationKey = (object?)")
+                        .Add(CodeFragment.Parenthesize(
+                            CodeFragment.Source(loop.Track, loop.TrackOffset)))
+                        .Add(";"));
+            }
+
+            _nodes.AppendLine(
+                indent + 1,
+                $"{parentVariable}.AppendChild({fragmentVariable});");
+            foreach (var child in loop.Body) {
+                _nodes.Emit(
+                    child,
+                    indent + 1,
+                    fragmentVariable,
+                    reconciliationKey: null);
+            }
         }
 
         if (hasItemsVariable is not null) {
@@ -128,11 +156,16 @@ internal sealed class MarkupControlFlowEmitter {
         string? parentVariable) {
         _nodes.AppendLine(
             indent,
-            $"switch ({MarkupValueEmitter.Parenthesize(switchBlock.Expression)}) {{");
+            CodeFragment.Text("switch (")
+                .Add(CodeFragment.Parenthesize(
+                    CodeFragment.Source(switchBlock.Expression, switchBlock.ExpressionOffset)))
+                .Add(") {"));
         foreach (var switchCase in switchBlock.Cases) {
             EmitSwitchSection(
                 switchCase.Body,
-                $"case {switchCase.Pattern}:",
+                CodeFragment.Text("case ")
+                    .Add(CodeFragment.Source(switchCase.Pattern, switchCase.PatternOffset))
+                    .Add(":"),
                 indent,
                 parentVariable);
         }
@@ -140,7 +173,7 @@ internal sealed class MarkupControlFlowEmitter {
         if (switchBlock.DefaultBody.Count != 0) {
             EmitSwitchSection(
                 switchBlock.DefaultBody,
-                "default:",
+                CodeFragment.Text("default:"),
                 indent,
                 parentVariable);
         }
@@ -150,7 +183,7 @@ internal sealed class MarkupControlFlowEmitter {
 
     private void EmitSwitchSection(
         IReadOnlyList<MarkupNode> body,
-        string label,
+        CodeFragment label,
         int indent,
         string? parentVariable) {
         _nodes.AppendLine(indent, label);
