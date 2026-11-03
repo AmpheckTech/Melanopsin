@@ -106,6 +106,7 @@ internal static class MarkupDiagnosticDescriptors {
             MarkupDiagnosticCodes.UnknownControl => UnknownControl,
             MarkupDiagnosticCodes.UnknownAttribute => UnknownAttribute,
             MarkupDiagnosticCodes.InvalidAttributeValue => InvalidAttributeValue,
+            MarkupDiagnosticCodes.InvalidControlSchema => InvalidControlSchema,
             MarkupDiagnosticCodes.InvalidComponentClass => InvalidComponentClass,
             MarkupDiagnosticCodes.InvalidResourceManifest => InvalidResourceManifest,
             MarkupDiagnosticCodes.UnknownResource => UnknownResource,
