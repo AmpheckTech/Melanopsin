@@ -1,3 +1,3 @@
 [submodule "external/Melanopsin.Mathematics"]
 	path = external/Melanopsin.Mathematics
-	url = git@github.com:AmpheckTech/Melanopsin.Mathematics.git
+	url = https://github.com/AmpheckTech/Melanopsin.Mathematics.git
