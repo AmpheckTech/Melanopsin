@@ -4,6 +4,8 @@
     <IsAotCompatible>true</IsAotCompatible>
     <IsTrimmable>true</IsTrimmable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsPackable>true</IsPackable>
+    <PackageTags>ui;platform;windows;win32</PackageTags>
     <RootNamespace>Melanopsin.UI.Platform.Win32</RootNamespace>
     <Description>Native Win32 platform host for Melanopsin.</Description>
   </PropertyGroup>

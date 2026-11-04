@@ -4,6 +4,8 @@
     <IsAotCompatible>true</IsAotCompatible>
     <IsTrimmable>true</IsTrimmable>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <IsPackable>true</IsPackable>
+    <PackageTags>ui;graphics;text;font;shaping</PackageTags>
     <RootNamespace>Melanopsin.Graphics</RootNamespace>
     <Description>Backend-neutral graphics geometry, commands, surfaces, font parsing, shaping, and text layout.</Description>
   </PropertyGroup>
@@ -16,7 +18,6 @@
     <PackageReference Include="HarfBuzzSharp" Version="14.2.1.301" />
     <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" Version="14.2.1.301" />
     <PackageReference Include="HarfBuzzSharp.NativeAssets.Win32" Version="14.2.1.301" />
-    <PackageReference Include="Unicode.Bidi" Version="0.3.18" />
   </ItemGroup>
 
   <ItemGroup>
@@ -27,6 +28,9 @@
   <ItemGroup>
     <EmbeddedResource Include="Text/Shaping/LineBreakData.bin">
       <LogicalName>Melanopsin.Graphics.Text.Shaping.LineBreakData.bin</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Text/Shaping/BidiData.bin">
+      <LogicalName>Melanopsin.Graphics.Text.Shaping.BidiData.bin</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
 </Project>

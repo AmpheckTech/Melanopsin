@@ -4,6 +4,8 @@
     <IsAotCompatible>true</IsAotCompatible>
     <IsTrimmable>true</IsTrimmable>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <IsPackable>true</IsPackable>
+    <PackageTags>ui;graphics;skia;rendering</PackageTags>
     <RootNamespace>Melanopsin.Graphics.Backend.Skia</RootNamespace>
     <Description>Default Skia rendering backend for Melanopsin.</Description>
   </PropertyGroup>

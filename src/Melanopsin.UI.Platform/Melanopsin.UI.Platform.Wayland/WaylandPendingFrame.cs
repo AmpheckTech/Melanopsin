@@ -48,6 +48,10 @@ internal sealed class WaylandPendingFrame {
         }
     }
 
+    /// <summary>
+    /// Clears the presenter's pending state and transfers lease ownership to
+    /// the caller without releasing it.
+    /// </summary>
     public RenderFrameLease DetachWithoutRelease() {
         if (!_isOccupied) {
             Reset();

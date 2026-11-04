@@ -12,4 +12,5 @@ public enum WindowEventKind {
     Moved,
     DpiChanged,
     RenderRequested,
+    NotificationActivated,
 }

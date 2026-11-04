@@ -64,7 +64,7 @@ public sealed partial class WaylandPlatformHost : IPlatformWindowHost {
 
         _connection = new WaylandConnection(displayName);
         _clipboard = new WaylandClipboard(this);
-        _notifications = new WaylandNotifications();
+        _notifications = new WaylandNotifications(_events.QueueNotification);
         try {
             _decorationContext = new WaylandLibDecorContext(
                 _connection.Display.Handle,
@@ -196,7 +196,15 @@ public sealed partial class WaylandPlatformHost : IPlatformWindowHost {
     public bool TryDequeueEvent(out WindowEvent windowEvent) {
         ObjectDisposedException.ThrowIf(_disposed, this);
         DispatchPending();
-        return _events.TryDequeue(out windowEvent);
+        if (!_events.TryDequeue(out windowEvent)) {
+            return false;
+        }
+
+        if (windowEvent.Notification is { } notification) {
+            _notifications.DispatchActivated(notification);
+        }
+
+        return true;
     }
 
     public void WaitForEvent(int timeoutMilliseconds) {
@@ -268,6 +276,7 @@ public sealed partial class WaylandPlatformHost : IPlatformWindowHost {
     }
 
     private void Dispatch(int timeoutMilliseconds) {
+        _notifications.Pump();
         var result = _decorationContext.Dispatch(timeoutMilliseconds);
         // -EINTR is a transient interruption. The default queue may still have
         // events ready, so continue with the managed dispatch instead of

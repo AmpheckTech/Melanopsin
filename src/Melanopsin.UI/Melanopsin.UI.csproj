@@ -4,6 +4,8 @@
     <IsAotCompatible>true</IsAotCompatible>
     <IsTrimmable>true</IsTrimmable>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <IsPackable>true</IsPackable>
+    <PackageTags>ui;desktop;native-aot</PackageTags>
     <RootNamespace>Melanopsin.UI</RootNamespace>
     <Description>Native AOT-friendly UI runtime for desktop and embedded applications.</Description>
   </PropertyGroup>

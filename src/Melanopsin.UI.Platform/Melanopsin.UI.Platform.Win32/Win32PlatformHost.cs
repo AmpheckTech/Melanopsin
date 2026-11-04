@@ -47,11 +47,12 @@ public sealed class Win32PlatformHost : IPlatformWindowHost {
         _timerPeriodSet = Win32Native.timeBeginPeriod(1) == 0;
         _className = $"Melanopsin.UI.{Environment.ProcessId}." +
             Interlocked.Increment(ref _presenterSequence);
+        _notifications = new Win32Notifications(_windows, _events.QueueNotification);
         _windowProcedure = new Win32WindowMessageRouter(
             _windows,
             _events,
-            UpdateDisplayScale).WindowProcedure;
-        _notifications = new Win32Notifications(_windows);
+            UpdateDisplayScale,
+            _notifications.HandleCallbackMessage).WindowProcedure;
         RegisterWindowClass();
     }
 
@@ -130,7 +131,15 @@ public sealed class Win32PlatformHost : IPlatformWindowHost {
     public bool TryDequeueEvent(out WindowEvent windowEvent) {
         ObjectDisposedException.ThrowIf(_disposed, this);
         PollEvents();
-        return _events.TryDequeue(out windowEvent);
+        if (!_events.TryDequeue(out windowEvent)) {
+            return false;
+        }
+
+        if (windowEvent.Notification is { } notification) {
+            _notifications.DispatchActivated(notification);
+        }
+
+        return true;
     }
 
     public void WaitForEvent(int timeoutMilliseconds) {
@@ -138,10 +147,9 @@ public sealed class Win32PlatformHost : IPlatformWindowHost {
         _ = Win32Native.MsgWaitForMultipleObjectsEx(
             handleCount: 0,
             IntPtr.Zero,
-            timeoutMilliseconds: (uint)Math.Clamp(
-                timeoutMilliseconds,
-                0,
-                int.MaxValue),
+            timeoutMilliseconds: timeoutMilliseconds < 0
+                ? Win32Native.InfiniteTimeout
+                : (uint)timeoutMilliseconds,
             wakeMask: 0x04FF,
             flags: 0);
     }

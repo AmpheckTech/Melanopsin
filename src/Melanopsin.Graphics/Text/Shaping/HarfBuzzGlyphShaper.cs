@@ -1,7 +1,6 @@
 using System.Text;
 using HarfBuzzSharp;
 using Melanopsin.Graphics.Text.Fonts;
-using Unicode.Bidi;
 
 namespace Melanopsin.Graphics.Text;
 
@@ -22,7 +21,7 @@ internal sealed class HarfBuzzGlyphShaper : IDisposable {
         int length,
         float fontSize,
         TextDirection baseDirection,
-        BidiInfo bidi,
+        BidiText bidi,
         FontFace? preferredFont) {
         lock (_shapeLock) {
             ObjectDisposedException.ThrowIf(_disposed, this);
@@ -43,7 +42,7 @@ internal sealed class HarfBuzzGlyphShaper : IDisposable {
         int length,
         float fontSize,
         TextDirection baseDirection,
-        BidiInfo bidi,
+        BidiText bidi,
         FontFace? preferredFont) {
         var runs = new List<TextRun>();
         var segmentStart = start;
@@ -71,7 +70,6 @@ internal sealed class HarfBuzzGlyphShaper : IDisposable {
             var direction = continuesSegment
                 ? segmentDirection
                 : TextDirectionResolver.ResolveRune(
-                    rune,
                     index,
                     baseDirection,
                     bidi);

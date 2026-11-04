@@ -158,8 +158,9 @@ public sealed class AnimationTimeline {
     /// Starts or resumes the timeline.
     /// </summary>
     /// <remarks>
-    /// Playing a completed timeline resets it to zero and starts a new run;
-    /// <see cref="AnimationState.Running"/> is a no-op.
+    /// Playing a completed timeline resets it to zero and starts a new run.
+    /// Playing a running timeline leaves its elapsed time unchanged and does
+    /// not start another run.
     /// </remarks>
     public void Play() {
         if (State == AnimationState.Completed) {

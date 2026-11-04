@@ -155,22 +155,29 @@ public sealed partial class ControlsSample : Component {
 
     private async Task NotifyAsync() {
         if (!PlatformServicesContext.Value.TryGetValue(this, out var services) ||
-            services.Notifications is not { IsSupported: true } notifications) {
+            services.Notifications is not { } notifications ||
+            !notifications.Capabilities.CanSubmit) {
             _platformStatus = "Notifications are unavailable";
             Invalidate();
             return;
         }
 
         try {
-            var shown = await notifications.ShowAsync(
-                new NotificationOptions(
+            var result = await notifications.ShowAsync(
+                new PortableNotificationRequest(
+                    new NotificationId(1),
                     "Melanopsin",
                     string.IsNullOrWhiteSpace(_displayName)
                         ? "Controls demo"
                         : _displayName));
-            _platformStatus = shown
-                ? "Notification sent"
-                : "Notification was not shown";
+            _platformStatus = result.Kind switch {
+                NotificationResultKind.Accepted => "Notification accepted",
+                NotificationResultKind.Degraded =>
+                    $"Notification shown with omissions: {result.OmittedFeatures}",
+                NotificationResultKind.Rejected =>
+                    $"Notification rejected: {result.OmittedFeatures}",
+                _ => "Notification service is unavailable",
+            };
         } catch (Exception exception) {
             _platformStatus = $"Notification failed: {exception.Message}";
         }

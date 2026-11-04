@@ -3,8 +3,11 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <PublishAot>false</PublishAot>
     <IsRoslynComponent>true</IsRoslynComponent>
+    <IsPackable>true</IsPackable>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <PackageTags>ui;mxml;source-generator;analyzer</PackageTags>
     <RootNamespace>Melanopsin.UI.Markup.Compiler</RootNamespace>
     <Description>Compile-time markup language and source generator for Melanopsin.</Description>
   </PropertyGroup>
@@ -16,5 +19,16 @@
   <ItemGroup>
     <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
     <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="$(OutputPath)$(AssemblyName).dll"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs"
+          Visible="false" />
+    <None Include="$(OutputPath)$(AssemblyName).pdb"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs"
+          Visible="false" />
   </ItemGroup>
 </Project>

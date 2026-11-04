@@ -43,7 +43,7 @@ internal sealed class MarkupTreeParser {
             Report(
                 MarkupDiagnosticCodes.UnsupportedDirective,
                 $"Unsupported view directive <{element.Name.LocalName}>. " +
-                "Use Angular-like @if, @else and @for blocks.",
+                "Use @if, @else and @for blocks.",
                 element,
                 element.Name.LocalName.Length);
             return new MarkupElement(

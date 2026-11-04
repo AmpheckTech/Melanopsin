@@ -10,14 +10,17 @@ internal sealed class Win32WindowMessageRouter {
     private readonly Win32WindowEventQueue _events;
     private readonly Win32PointerRouter _pointer;
     private readonly Action<float>? _displayScaleChanged;
+    private readonly Func<IntPtr, bool>? _notificationMessage;
 
     public Win32WindowMessageRouter(
         Win32WindowRegistry windows,
         Win32WindowEventQueue events,
-        Action<float>? displayScaleChanged = null) {
+        Action<float>? displayScaleChanged = null,
+        Func<IntPtr, bool>? notificationMessage = null) {
         _windows = windows;
         _events = events;
         _displayScaleChanged = displayScaleChanged;
+        _notificationMessage = notificationMessage;
         _pointer = new Win32PointerRouter(windows, events);
     }
 
@@ -31,6 +34,10 @@ internal sealed class Win32WindowMessageRouter {
         }
 
         switch (message) {
+            case Win32Native.NotificationCallbackMessage when
+                _notificationMessage?.Invoke(lParam) == true:
+                return IntPtr.Zero;
+
             case Win32Native.WmPaint:
                 var deviceContext = Win32Native.BeginPaint(windowHandle, out var paint);
                 try {

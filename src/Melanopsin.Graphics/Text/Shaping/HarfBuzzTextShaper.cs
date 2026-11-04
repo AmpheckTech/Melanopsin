@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Text;
 using Melanopsin.Graphics.Text.Fonts;
-using Unicode.Bidi;
 
 namespace Melanopsin.Graphics.Text;
 
@@ -41,14 +40,8 @@ public sealed partial class HarfBuzzTextShaper : ITextLayout, IDisposable {
                 emptyMetrics.Descent);
         }
 
-        var baseDirection = TextDirectionResolver.ResolveBase(
-            options.Direction,
-            text);
-        var bidi = BidiInfo.Create(
-            text,
-            baseDirection == TextDirection.RightToLeft
-                ? Level.Rtl()
-                : Level.Ltr());
+        var bidi = BidiLayout.Analyze(text, options.Direction);
+        var baseDirection = bidi.BaseDirection;
         var lines = new List<TextLine>();
         var pendingRuns = new List<TextRun>();
         var lineWidth = 0f;
@@ -238,17 +231,17 @@ public sealed partial class HarfBuzzTextShaper : ITextLayout, IDisposable {
         float width,
         TextDirection direction,
         float fontSize,
-        BidiInfo bidi,
+        BidiText bidi,
         FontFace? preferredFont) {
         var orderedRuns = runs;
         if (runs.Count > 1) {
-            var levels = new Level[runs.Count];
+            var levels = new int[runs.Count];
             for (var index = 0; index < runs.Count; index++) {
-                levels[index] = bidi.Levels[
-                    Math.Clamp(runs[index].Start, 0, bidi.Levels.Count - 1)];
+                levels[index] = bidi.LevelAt(runs[index].Start);
             }
 
-            var order = BidiInfo.ReorderVisual(levels);
+            var order = Enumerable.Range(0, runs.Count).ToList();
+            BidiVisualOrder.Reorder(levels, order);
             orderedRuns = [.. runs];
             var x = 0f;
             for (var index = 0; index < orderedRuns.Count; index++) {

@@ -33,10 +33,9 @@ public sealed partial class WindowManager {
             }
 
             // Do not draw into an offscreen target while the platform is
-            // waiting for the compositor's frame callback. This mirrors
-            // Avalonia's RenderTargetNotReady/State.IsReady behavior and keeps
-            // interactive resize frames coalesced instead of rendering every
-            // configure event.
+            // waiting for the compositor's frame callback. This coalesces
+            // interactive resize frames instead of rendering every configure
+            // event for a frame the platform cannot accept.
             if (_platformHost is not null &&
                 !_platformHost.IsPresentationReady(window.Descriptor)) {
                 continue;

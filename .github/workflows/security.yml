@@ -1,0 +1,142 @@
+name: Security
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+  DOTNET_ROLL_FORWARD: Major
+
+jobs:
+  dependency-audit:
+    name: Static analysis and dependency audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install .NET SDK
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore locked dependencies
+        run: dotnet restore Melanopsin.slnx --locked-mode
+
+      - name: Build with analyzers
+        run: dotnet build Melanopsin.slnx --no-restore --configuration Release --nologo
+
+      - name: Verify analyzer cleanup
+        run: dotnet format analyzers Melanopsin.slnx --verify-no-changes --no-restore --verbosity minimal
+
+      - name: Export dependency inventory and audit reports
+        run: |
+          mkdir -p build/security
+          dotnet list Melanopsin.slnx package --include-transitive --format json --output-version 1 > build/security/packages.json
+          dotnet list Melanopsin.slnx package --vulnerable --include-transitive --format json --output-version 1 > build/security/vulnerabilities.json
+          dotnet list Melanopsin.slnx package --deprecated --include-transitive --format json --output-version 1 > build/security/deprecated.json
+
+      - name: Enforce dependency audit results
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          report_dir = Path("build/security")
+          reports = {}
+          for name in ("packages", "vulnerabilities", "deprecated"):
+              path = report_dir / f"{name}.json"
+              try:
+                  reports[name] = json.loads(path.read_text(encoding="utf-8"))
+              except (OSError, json.JSONDecodeError) as error:
+                  raise SystemExit(f"Could not read audit report {path}: {error}")
+
+          vulnerabilities = []
+
+          def collect_vulnerabilities(value):
+              if isinstance(value, dict):
+                  for key, item in value.items():
+                      if key in ("topLevelPackages", "transitivePackages") and isinstance(item, list):
+                          vulnerabilities.extend(item)
+                      else:
+                          collect_vulnerabilities(item)
+              elif isinstance(value, list):
+                  for item in value:
+                      collect_vulnerabilities(item)
+
+          collect_vulnerabilities(reports["vulnerabilities"])
+          if vulnerabilities:
+              print(json.dumps(vulnerabilities, indent=2))
+              raise SystemExit("NuGet reported vulnerable packages")
+
+          print("NuGet dependency reports parsed successfully; no vulnerable packages reported.")
+          PY
+
+      - name: Upload dependency reports
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: dependency-reports
+          path: build/security/*.json
+          if-no-files-found: warn
+
+  sbom:
+    name: Release SBOM
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install .NET SDK
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore tools and locked dependencies
+        run: |
+          dotnet tool restore
+          dotnet restore Melanopsin.slnx --locked-mode
+
+      - name: Build release artifact
+        run: dotnet build Melanopsin.slnx --configuration Release --no-restore --nologo
+
+      - name: Generate SPDX SBOM
+        run: |
+          mkdir -p build/security/manifest
+          dotnet tool run sbom-tool generate \
+            -b . \
+            -bc . \
+            -m build/security/manifest \
+            -pn Melanopsin \
+            -pv ${{ github.sha }} \
+            -ps AmpheckTech \
+            -nsb https://github.com/AmpheckTech/Melanopsin/sbom \
+            -nsu ${{ github.sha }} \
+            -D
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: sbom-spdx
+          path: build/security/manifest/_manifest
+          if-no-files-found: error

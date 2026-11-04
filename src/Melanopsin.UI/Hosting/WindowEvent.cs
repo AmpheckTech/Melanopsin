@@ -9,6 +9,7 @@ public readonly record struct WindowEvent(
     PointerInputEvent? Pointer = null,
     KeyInputEvent? Key = null,
     TextCompositionEvent? Composition = null,
+    NotificationActivatedEventArgs? Notification = null,
     int X = 0,
     int Y = 0,
     float DisplayScale = 0);

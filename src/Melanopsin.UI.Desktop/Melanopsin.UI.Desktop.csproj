@@ -3,6 +3,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <IsAotCompatible>true</IsAotCompatible>
     <IsTrimmable>true</IsTrimmable>
+    <IsPackable>true</IsPackable>
+    <PackageTags>ui;desktop;windows;linux;wayland</PackageTags>
     <RootNamespace>Melanopsin.UI.Desktop</RootNamespace>
     <Description>Default desktop bootstrap for Melanopsin applications.</Description>
   </PropertyGroup>

@@ -4,6 +4,8 @@
     <IsAotCompatible>true</IsAotCompatible>
     <IsTrimmable>true</IsTrimmable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsPackable>true</IsPackable>
+    <PackageTags>ui;opengl;wgl;egl</PackageTags>
     <RootNamespace>Melanopsin.UI.OpenGL</RootNamespace>
     <Description>Optional WGL and EGL-backed OpenGLContainer control for Melanopsin.</Description>
   </PropertyGroup>

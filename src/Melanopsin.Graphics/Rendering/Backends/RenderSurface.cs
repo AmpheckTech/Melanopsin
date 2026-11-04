@@ -11,7 +11,11 @@ public interface IRenderSurface {
 public interface ICpuReadableSurface : IRenderSurface {
     /// <summary>
     /// Refreshes <paramref name="damage"/> and copies a complete BGRA snapshot
-    /// into caller-owned storage. The destination is never retained.
+    /// into caller-owned storage. The destination must hold at least
+    /// <see cref="IRenderSurface.Stride"/> times <see cref="IRenderSurface.Size"/>
+    /// height bytes; <paramref name="stride"/> receives the row stride used.
+    /// A false result does not represent a complete snapshot. The destination
+    /// is never retained.
     /// </summary>
     bool TryCopyPixels(
         DamageRegion damage,
@@ -20,6 +24,8 @@ public interface ICpuReadableSurface : IRenderSurface {
         out int stride);
 }
 
+// TODO(DRM): Replace the boolean presentation result with a present ticket and
+// release fence before exposing DMA-BUF scanout through this capability.
 /// <summary>
 /// Optional capability for surfaces that can be submitted directly to a
 /// platform-native presentation target. The handle is opaque to graphics code.
@@ -35,7 +41,8 @@ public interface INativePresentationSurface : IRenderSurface {
     bool TryPresentNative(IntPtr target);
 
     /// <summary>
-    /// Releases resources associated with the native target binding.
+    /// Releases resources associated with the native target binding. The
+    /// operation is idempotent for the current EGL and WGL implementations.
     /// </summary>
     void ReleaseNativeTarget(IntPtr target);
 }

@@ -1,12 +1,15 @@
 namespace Melanopsin.UI.Hosting;
 
-/// <summary>
-/// Optional native notification capability exposed by a platform host.
-/// </summary>
 public interface IPlatformNotifications {
-    bool IsSupported { get; }
+    NotificationCapabilities Capabilities { get; }
 
-    ValueTask<bool> ShowAsync(
-        NotificationOptions notification,
+    ValueTask<NotificationResult> ShowAsync(
+        PortableNotificationRequest request,
         CancellationToken cancellationToken = default);
+
+    ValueTask<bool> DismissAsync(
+        NotificationId id,
+        CancellationToken cancellationToken = default);
+
+    event EventHandler<NotificationActivatedEventArgs>? Activated;
 }

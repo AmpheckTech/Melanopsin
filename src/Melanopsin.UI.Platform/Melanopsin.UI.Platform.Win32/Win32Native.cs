@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 namespace Melanopsin.UI.Platform.Win32;
 
 internal static class Win32Native {
+    internal const uint InfiniteTimeout = 0xFFFFFFFF;
     internal const uint DibRgbColors = 0;
     internal const uint Srccopy = 0x00CC0020;
     internal const int SwShow = 5;
@@ -60,6 +61,8 @@ internal static class Win32Native {
     internal const uint WmDpiChanged = 0x02E0;
     internal const uint WmEraseBackground = 0x0014;
     internal const uint WmUser = 0x0400;
+    internal const uint NotificationCallbackMessage = WmUser + 1;
+    internal const uint NinBalloonUserClick = WmUser + 5;
     internal const int HtClient = 1;
     internal const uint CfUnicodeText = 13;
     internal const uint GmemMoveable = 0x0002;

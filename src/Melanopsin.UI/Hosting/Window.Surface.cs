@@ -28,6 +28,8 @@ public sealed partial class Window {
         var replacement = _targetFactory(targetDescriptor);
         var previous = _target;
         _target = replacement;
+        // An accepted presenter lease can still reference the old surface.
+        // Retire it and dispose only after that lease is released.
         _retiredTargets.Add(previous);
         Descriptor = new WindowDescriptor(
             previousDescriptor.Id,

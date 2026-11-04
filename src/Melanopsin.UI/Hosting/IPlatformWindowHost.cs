@@ -30,7 +30,24 @@ public interface IPlatformWindowHost : IFramePresenter, IDisposable {
     /// </summary>
     void CloseWindow(WindowId windowId);
 
+    /// <summary>
+    /// Dequeues one pending UI event after draining the platform queue.
+    /// </summary>
+    /// <returns>
+    /// <see langword="false"/> when no UI event is currently queued.
+    /// </returns>
     bool TryDequeueEvent(out WindowEvent windowEvent);
 
+    /// <summary>
+    /// Waits for platform activity and dispatches it before returning.
+    /// </summary>
+    /// <param name="timeoutMilliseconds">
+    /// Zero polls without blocking; a negative value waits indefinitely.
+    /// </param>
+    /// <remarks>
+    /// These members are called on the platform/application event thread. A
+    /// wake-up may occur without producing a queued UI event, so callers must
+    /// still check <see cref="TryDequeueEvent"/> afterward.
+    /// </remarks>
     void WaitForEvent(int timeoutMilliseconds);
 }

@@ -4,6 +4,8 @@
     <IsAotCompatible>true</IsAotCompatible>
     <IsTrimmable>true</IsTrimmable>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <IsPackable>true</IsPackable>
+    <PackageTags>ui;graphics;math;geometry</PackageTags>
     <RootNamespace>Melanopsin.Mathematics</RootNamespace>
     <Description>Backend- and UI-independent math and geometry primitives.</Description>
   </PropertyGroup>

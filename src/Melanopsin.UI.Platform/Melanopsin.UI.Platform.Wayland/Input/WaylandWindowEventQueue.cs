@@ -3,14 +3,27 @@ using Melanopsin.UI.Input;
 namespace Melanopsin.UI.Platform.Wayland.Input;
 
 internal sealed class WaylandWindowEventQueue {
+    private readonly object _gate = new();
     private readonly Queue<WindowEvent> _events = [];
 
     public void Clear() {
-        _events.Clear();
+        lock (_gate) {
+            _events.Clear();
+        }
     }
 
     public bool TryDequeue(out WindowEvent windowEvent) {
-        return _events.TryDequeue(out windowEvent);
+        lock (_gate) {
+            return _events.TryDequeue(out windowEvent);
+        }
+    }
+
+    public void QueueNotification(NotificationActivatedEventArgs notification) {
+        Enqueue(new WindowEvent(
+            default,
+            WindowEventKind.NotificationActivated,
+            default,
+            Notification: notification));
     }
 
     public void QueueResized(WaylandWindow window) {
@@ -135,7 +148,9 @@ internal sealed class WaylandWindowEventQueue {
     }
 
     private void Enqueue(WindowEvent windowEvent) {
-        _events.Enqueue(windowEvent);
+        lock (_gate) {
+            _events.Enqueue(windowEvent);
+        }
     }
 
     private static string FilterControlCharacters(string value) {

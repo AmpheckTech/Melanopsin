@@ -1,7 +1,14 @@
 <Project>
   <PropertyGroup>
+    <MelanopsinMinimumSdkVersion Condition="'$(MelanopsinMinimumSdkVersion)' == ''">10.0.100</MelanopsinMinimumSdkVersion>
     <CompilerGeneratedFilesOutputPath>$(IntermediateOutputPath)generated</CompilerGeneratedFilesOutputPath>
   </PropertyGroup>
+
+  <Target Name="ValidateMelanopsinSdkVersion"
+          BeforeTargets="PrepareForBuild">
+    <Error Condition="$([MSBuild]::VersionLessThan('$(NETCoreSdkVersion)', '$(MelanopsinMinimumSdkVersion)'))"
+           Text="Melanopsin requires the .NET SDK $(MelanopsinMinimumSdkVersion) or newer. Current SDK: $(NETCoreSdkVersion)." />
+  </Target>
 
   <Import Project="$(MSBuildThisFileDirectory)tools/Melanopsin.UI.ResourceCompiler/Melanopsin.Resources.targets"
           Condition="Exists('$(MSBuildThisFileDirectory)tools/Melanopsin.UI.ResourceCompiler/Melanopsin.Resources.targets')" />

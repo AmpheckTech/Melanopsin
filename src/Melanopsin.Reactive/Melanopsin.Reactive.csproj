@@ -4,6 +4,8 @@
     <IsAotCompatible>true</IsAotCompatible>
     <IsTrimmable>true</IsTrimmable>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <IsPackable>true</IsPackable>
+    <PackageTags>ui;reactive;binding</PackageTags>
     <RootNamespace>Melanopsin.Reactive</RootNamespace>
     <Description>UI-independent reactive values with automatic dependency tracking.</Description>
   </PropertyGroup>

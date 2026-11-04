@@ -5,12 +5,38 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AnalysisLevel>latest</AnalysisLevel>
+    <AnalysisMode>Default</AnalysisMode>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <NuGetAuditLevel>low</NuGetAuditLevel>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestoreLockedMode Condition="'$(CI)' == 'true'">true</RestoreLockedMode>
     <Deterministic>true</Deterministic>
-    <UseArtifactsOutput>true</UseArtifactsOutput>
-    <ArtifactsPath>$(MSBuildThisFileDirectory)build</ArtifactsPath>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <IsPackable>false</IsPackable>
+    <Authors>AmpheckTech</Authors>
+    <Company>AmpheckTech</Company>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/AmpheckTech/Melanopsin.git</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/AmpheckTech/Melanopsin</PackageProjectUrl>
+    <VersionPrefix Condition="'$(VersionPrefix)' == ''">0.1.0</VersionPrefix>
+    <VersionSuffix Condition="'$(VersionSuffix)' == ''">alpha.1</VersionSuffix>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)artifacts/packages</PackageOutputPath>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)NOTICE.md"
+          Pack="true"
+          PackagePath=""
+          Visible="false" />
+  </ItemGroup>
 
   <Import Project="$(MSBuildThisFileDirectory)tools/Melanopsin.UI.ResourceCompiler/Melanopsin.Resources.props"
           Condition="Exists('$(MSBuildThisFileDirectory)tools/Melanopsin.UI.ResourceCompiler/Melanopsin.Resources.props')" />

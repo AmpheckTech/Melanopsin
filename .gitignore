@@ -4,9 +4,6 @@ build/
 artifacts/
 .vs/
 .vscode/
-!editors/vscode/.vscode/
-!editors/vscode/.vscode/launch.json
-!editors/vscode/.vscode/tasks.json
 .idea/
 *.user
 *.suo
@@ -15,5 +12,4 @@ artifacts/
 *.log
 *.png
 **/node_modules/
-editors/vscode/out/
 *.vsix

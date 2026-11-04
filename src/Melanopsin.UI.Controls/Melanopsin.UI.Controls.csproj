@@ -4,6 +4,8 @@
     <IsAotCompatible>true</IsAotCompatible>
     <IsTrimmable>true</IsTrimmable>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <IsPackable>true</IsPackable>
+    <PackageTags>ui;controls;layout</PackageTags>
     <RootNamespace>Melanopsin.UI.Controls</RootNamespace>
     <Description>Built-in controls and layout containers for Melanopsin UI.</Description>
   </PropertyGroup>

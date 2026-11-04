@@ -1,5 +1,4 @@
 using Melanopsin.Graphics.Backend.Skia;
-using Melanopsin.Graphics.Backend.RHI;
 using Melanopsin.UI.Demo;
 using Melanopsin.UI.Demo.Views;
 using Melanopsin.UI.Desktop;

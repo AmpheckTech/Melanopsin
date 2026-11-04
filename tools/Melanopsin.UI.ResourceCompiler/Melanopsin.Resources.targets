@@ -16,7 +16,7 @@
     <MSBuild Projects="$(MelanopsinResourceCompilerProject)"
              Targets="Restore;Build"
              BuildInParallel="false"
-             Properties="Configuration=$(MelanopsinResourceCompilerConfiguration);ArtifactsPath=$(ArtifactsPath);UseArtifactsOutput=true"
+             Properties="Configuration=$(MelanopsinResourceCompilerConfiguration);TargetFramework=$(MelanopsinResourceCompilerTargetFramework)"
              RemoveProperties="RuntimeIdentifier;SelfContained;PublishAot;PublishTrimmed;PublishSingleFile;PlatformTarget;Platform" />
   </Target>
 

@@ -3,6 +3,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <IsAotCompatible>true</IsAotCompatible>
     <IsTrimmable>true</IsTrimmable>
+    <IsPackable>true</IsPackable>
+    <PackageTags>ui;developer-tools;diagnostics</PackageTags>
     <RootNamespace>Melanopsin.UI.DevTools</RootNamespace>
     <Description>XML-driven diagnostics window for Melanopsin applications.</Description>
   </PropertyGroup>

@@ -4,6 +4,8 @@
     <IsAotCompatible>true</IsAotCompatible>
     <IsTrimmable>true</IsTrimmable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsPackable>true</IsPackable>
+    <PackageTags>ui;platform;linux;wayland</PackageTags>
     <RootNamespace>Melanopsin.UI.Platform.Wayland</RootNamespace>
     <Description>Managed Wayland platform host for Melanopsin.</Description>
   </PropertyGroup>
