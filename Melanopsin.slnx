@@ -5,9 +5,11 @@
   <Folder Name="/tools/">
     <Project Path="tools/Melanopsin.UI.ResourceCompiler/Melanopsin.UI.ResourceCompiler.csproj" />
   </Folder>
+  <Folder Name="/external/">
+    <Project Path="external/Melanopsin.Mathematics/Melanopsin.Mathematics.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/Melanopsin.Graphics/Melanopsin.Graphics.csproj" />
-    <Project Path="src/Melanopsin.Mathematics/Melanopsin.Mathematics.csproj" />
     <Project Path="src/Melanopsin.Reactive/Melanopsin.Reactive.csproj" />
     <Project Path="src/Melanopsin.UI.Markup.Compiler/Melanopsin.UI.Markup.Compiler.csproj" />
     <Project Path="src/Melanopsin.UI.DevTools/Melanopsin.UI.DevTools.csproj" />

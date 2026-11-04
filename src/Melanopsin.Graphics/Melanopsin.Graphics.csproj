@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../Melanopsin.Mathematics/Melanopsin.Mathematics.csproj" />
+    <ProjectReference Include="../../external/Melanopsin.Mathematics/Melanopsin.Mathematics.csproj" />
   </ItemGroup>
 
   <ItemGroup>
