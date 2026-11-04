@@ -157,7 +157,7 @@ public sealed class Application : IDisposable
         _window = _windows.CreateWindow(options ?? new WindowOptions
         {
             Title = root.GetType().Name,
-            Size = new PixelSize(820, 720),
+            Size = new PixelSize(1280, 720),
         });
         _window.Root = new OverlayHost
         {
