@@ -9,6 +9,7 @@ namespace Melanopsin.UI.Hosting;
 public sealed partial class Window {
     private readonly Func<RenderTargetDescriptor, IRenderTarget> _targetFactory;
     private readonly WindowRenderContext _renderContext;
+    private readonly List<IRenderTarget> _retiredTargets = [];
     private IRenderTarget _target;
     private LayoutSnapshot? _lastLayout;
     private Node? _root;
@@ -25,6 +26,13 @@ public sealed partial class Window {
     private readonly Dictionary<Node, LayoutNodeGeometry> _previousLayoutGeometry =
         new(ReferenceEqualityComparer.Instance);
     private RenderOptions _lastRenderOptions;
+    private RenderOptions _stagedRenderOptions;
+    private RenderStatistics _stagedStatistics;
+    private DamageRegion? _stagedDamage;
+    private double _stagedLayoutMilliseconds;
+    private double _stagedComposeMilliseconds;
+    private double _stagedRenderMilliseconds;
+    private bool _hasStagedFrame;
     private bool _hasRendered;
     private long _frameNumber;
     private DevToolsSnapshot? _devToolsSnapshot;

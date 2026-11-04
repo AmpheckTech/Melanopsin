@@ -3,8 +3,6 @@ using SkiaSharp;
 namespace Melanopsin.Graphics.Backend.Skia;
 
 internal sealed partial class SkiaSceneRenderer {
-    private const long MaxRasterCacheEntryBytes = 8L * 1024 * 1024;
-
     private bool TryDrawRetainedLayer(
         SKCanvas canvas,
         RetainedLayer layer,
@@ -52,7 +50,7 @@ internal sealed partial class SkiaSceneRenderer {
         }
 
         var byteCount = (long)width * height * 4;
-        if (byteCount > MaxRasterCacheEntryBytes) {
+        if (byteCount > _rasterCacheOptions.EntryByteLimit) {
             return null;
         }
 

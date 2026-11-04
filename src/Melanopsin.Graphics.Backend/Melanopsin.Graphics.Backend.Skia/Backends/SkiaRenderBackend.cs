@@ -11,14 +11,23 @@ public sealed class SkiaRenderBackend : IRenderBackend {
     private readonly FontFace? _font;
     private readonly SKTypeface? _typeface;
     private readonly bool _ownsTypeface;
+    private readonly SkiaRasterCacheOptions _rasterCacheOptions;
     private int _disposed;
     private Exception? _cleanupFailure;
 
-    public SkiaRenderBackend() {
+    public SkiaRenderBackend(SkiaRasterCacheOptions rasterCacheOptions = default) {
+        _rasterCacheOptions = rasterCacheOptions == default
+            ? SkiaRasterCacheOptions.Default
+            : rasterCacheOptions;
     }
 
-    public SkiaRenderBackend(FontFace font) {
+    public SkiaRenderBackend(
+        FontFace font,
+        SkiaRasterCacheOptions rasterCacheOptions = default) {
         ArgumentNullException.ThrowIfNull(font);
+        _rasterCacheOptions = rasterCacheOptions == default
+            ? SkiaRasterCacheOptions.Default
+            : rasterCacheOptions;
         using var stream = font.OpenStream();
         _font = font;
         _typeface = SKTypeface.FromStream(stream, font.FaceIndex) ??
@@ -39,7 +48,11 @@ public sealed class SkiaRenderBackend : IRenderBackend {
         ObjectDisposedException.ThrowIf(
             Volatile.Read(ref _disposed) != 0,
             this);
-        return new SkiaRenderTarget(descriptor, _font, _typeface);
+        return new SkiaRenderTarget(
+            descriptor,
+            _font,
+            _typeface,
+            _rasterCacheOptions);
     }
 
     public void Dispose() {

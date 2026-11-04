@@ -39,19 +39,22 @@ public sealed class Resizer :
             return;
         }
 
-        var phase = inputEvent.Input.Phase;
+        var input = inputEvent.Input;
+        var phase = input.Phase;
         if (phase == PointerPhase.Down) {
-            if (inputEvent.Input.Button is not (MouseButtonKind.None or MouseButtonKind.Left)) {
+            if (!input.IsPrimaryButton) {
                 return;
             }
 
             _dragging = true;
-            _lastPointerX = inputEvent.Input.X;
+            _lastPointerX = input.X;
             SetState(UiStateNames.Pressed, true);
             inputEvent.Handled = true;
+        } else if (!input.IsPrimaryButton) {
+            return;
         } else if (phase == PointerPhase.Move && _dragging) {
-            var delta = inputEvent.Input.X - _lastPointerX;
-            _lastPointerX = inputEvent.Input.X;
+            var delta = input.X - _lastPointerX;
+            _lastPointerX = input.X;
             if (MathF.Abs(delta) >= float.Epsilon) {
                 DragDelta?.Invoke(delta);
             }

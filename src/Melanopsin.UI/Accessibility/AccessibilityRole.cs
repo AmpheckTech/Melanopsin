@@ -18,4 +18,6 @@ public enum AccessibilityRole {
     Slider,
     ProgressBar,
     Switch,
+    Menu,
+    MenuItem,
 }

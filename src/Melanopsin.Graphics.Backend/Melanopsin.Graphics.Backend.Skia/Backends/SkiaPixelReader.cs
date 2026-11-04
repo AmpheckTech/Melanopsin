@@ -21,15 +21,6 @@ internal sealed class SkiaPixelReader {
         _pixels = [];
     }
 
-    public ReadOnlyMemory<byte> Pixels {
-        get {
-            EnsureCapacity(_size);
-            return _pixels.AsMemory(
-                0,
-                checked(_size.Width * _size.Height * 4));
-        }
-    }
-
     public void ResizeCpu(PixelSize size, SKBitmap bitmap) {
         EnsureCapacity(size);
         _size = size;
@@ -62,6 +53,23 @@ internal sealed class SkiaPixelReader {
         ArgumentNullException.ThrowIfNull(surface);
         EnsureCapacity(_size);
         CopyGpuPixels(surface, damage, visualEffects);
+    }
+
+    public void CopyTo(Span<byte> destination, int destinationStride) {
+        var sourceStride = checked(_size.Width * 4);
+        var required = checked(sourceStride * _size.Height);
+        if (destinationStride < sourceStride ||
+            destination.Length < checked(destinationStride * _size.Height)) {
+            throw new ArgumentException(
+                "The destination buffer cannot hold the complete frame.",
+                nameof(destination));
+        }
+
+        EnsureCapacity(_size);
+        for (var row = 0; row < _size.Height; row++) {
+            _pixels.AsSpan(row * sourceStride, sourceStride).CopyTo(
+                destination.Slice(row * destinationStride, sourceStride));
+        }
     }
 
     private void EnsureCapacity(PixelSize size) {

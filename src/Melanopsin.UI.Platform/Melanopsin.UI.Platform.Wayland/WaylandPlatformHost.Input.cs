@@ -38,6 +38,7 @@ public sealed partial class WaylandPlatformHost {
     }
 
     private void HandlePointerButton(
+        uint serial,
         uint button,
         WlPointer.ButtonStateEnum state,
         uint time) {
@@ -55,6 +56,7 @@ public sealed partial class WaylandPlatformHost {
             return;
         }
 
+        _inputSerial = serial;
         _pointerTime = time;
         QueuePointer(
             window,
@@ -94,7 +96,8 @@ public sealed partial class WaylandPlatformHost {
     }
 
     private void HandlePointerFrame() {
-        if (_axisPending && _pointerWindow is { } window) {
+        if (_axisPending && _pointerWindow is { } window &&
+            !IsWindowInputBlocked(window)) {
             // Wayland scroll values use the opposite sign from UI wheel deltas.
             var horizontalDelta = _axisHorizontal120 != 0
                 ? -_axisHorizontal120
@@ -119,7 +122,31 @@ public sealed partial class WaylandPlatformHost {
         uint time) {
         window.PointerX = (float)_pointerX * window.DisplayScale;
         window.PointerY = (float)_pointerY * window.DisplayScale;
+        if (IsWindowInputBlocked(window) && phase != PointerPhase.Leave) {
+            return;
+        }
+
         _events.QueuePointer(window, phase, button, time);
+    }
+
+    private bool IsWindowInputBlocked(WaylandWindow window) {
+        var pending = new Stack<WindowId>();
+        pending.Push(window.Id);
+        while (pending.TryPop(out var ownerId)) {
+            foreach (var candidate in _windows.Values) {
+                if (candidate.OwnerId != ownerId) {
+                    continue;
+                }
+
+                if (candidate.IsModal) {
+                    return true;
+                }
+
+                pending.Push(candidate.Id);
+            }
+        }
+
+        return false;
     }
 
     private void UpdateSeatDevices(WlSeat.CapabilityEnum capabilities) {
@@ -308,7 +335,7 @@ public sealed partial class WaylandPlatformHost {
             uint time,
             uint button,
             WlPointer.ButtonStateEnum state) {
-            _host.HandlePointerButton(button, state, time);
+            _host.HandlePointerButton(serial, button, state, time);
         }
 
         protected override void Axis(

@@ -7,6 +7,7 @@ namespace Melanopsin.UI.Platform.Wayland;
 
 public sealed partial class WaylandPlatformHost {
     private void HandleKeyboardEnter(uint serial, WlSurface? surface) {
+        _inputSerial = serial;
         var window = FindWindow(surface);
         _keyboardWindow = window;
         if (window is not null) {
@@ -29,9 +30,15 @@ public sealed partial class WaylandPlatformHost {
 
     private void HandleKeyboardKey(
         uint time,
+        uint serial,
         uint key,
         WlKeyboard.KeyStateEnum state) {
+        _inputSerial = serial;
         if (_keyboardWindow is not { } window) {
+            return;
+        }
+
+        if (IsWindowInputBlocked(window)) {
             return;
         }
 
@@ -147,7 +154,7 @@ public sealed partial class WaylandPlatformHost {
             uint time,
             uint key,
             WlKeyboard.KeyStateEnum state) {
-            _host.HandleKeyboardKey(time, key, state);
+            _host.HandleKeyboardKey(time, serial, key, state);
         }
 
         protected override void Modifiers(

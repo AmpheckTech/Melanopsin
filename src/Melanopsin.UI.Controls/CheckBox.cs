@@ -1,3 +1,4 @@
+using Melanopsin.UI.Animation;
 using Melanopsin.UI.Accessibility;
 using Melanopsin.UI.Input;
 using Melanopsin.UI.Markup;
@@ -9,11 +10,20 @@ namespace Melanopsin.UI.Controls;
 public sealed class CheckBox :
     Control,
     IInputHandler,
+    IAnimationParticipant,
     IRenderCommandProvider,
     IAccessibilityActionProvider {
+    private static readonly Color UncheckedMarkerColor = new(255, 255, 255, 235);
+    private static readonly Color UncheckedBorderColor = new(105, 125, 118);
     private string _text = string.Empty;
     private Color _accentColor = new(32, 112, 90);
     private bool _isChecked;
+    private readonly Tween<float> _checkProgress = new(
+        0,
+        0,
+        TimeSpan.FromMilliseconds(150),
+        static (from, to, progress) => from + ((to - from) * progress),
+        Easing.EaseOut);
 
     public CheckBox()
         : base("CheckBox") {
@@ -63,6 +73,7 @@ public sealed class CheckBox :
 
             _isChecked = value;
             SetState(UiStateNames.Checked, value);
+            AnimateCheck(value);
         }
     }
 
@@ -90,7 +101,12 @@ public sealed class CheckBox :
             return;
         }
 
-        var phase = inputEvent.Input.Phase;
+        var input = inputEvent.Input;
+        if (!input.IsPrimaryButton) {
+            return;
+        }
+
+        var phase = input.Phase;
         if (phase == PointerPhase.Down) {
             SetState(UiStateNames.Pressed, true);
         } else if (phase == PointerPhase.Up) {
@@ -107,20 +123,35 @@ public sealed class CheckBox :
     public void AppendRenderCommands(
         RenderCommandContext context,
         List<RenderCommand> commands) {
+        var progress = Math.Clamp(_checkProgress.Value, 0, 1);
         var marker = context.FontSize;
         var markerX = context.Bounds.Right - context.Padding - marker;
         var markerY = context.Bounds.Y + ((context.Bounds.Height - marker) / 2);
         commands.Add(new FillRectangleCommand(
             new Rect(markerX, markerY, marker, marker),
-            IsChecked ? AccentColor : new Color(255, 255, 255, 235),
+            LerpColor(UncheckedMarkerColor, AccentColor, progress),
             context.FontSize * 0.2f));
         commands.Add(new StrokeRectangleCommand(
             new Rect(markerX, markerY, marker, marker),
-            IsChecked ? AccentColor : new Color(105, 125, 118),
+            LerpColor(UncheckedBorderColor, AccentColor, progress),
             Math.Max(1, context.FontSize / 14),
             context.FontSize * 0.2f));
 
         AppendLabel(commands, context, marker);
+    }
+
+    bool IAnimationParticipant.AdvanceAnimation(float elapsedSeconds) {
+        if (!_checkProgress.Advance(elapsedSeconds)) {
+            return false;
+        }
+
+        InvalidatePaint();
+        return _checkProgress.IsPlaying;
+    }
+
+    protected internal override void OnUnmounted() {
+        _checkProgress.Pause();
+        base.OnUnmounted();
     }
 
     protected override void OnSetAttribute(string name, object? value) {
@@ -140,6 +171,30 @@ public sealed class CheckBox :
         return name == "checked"
             ? InvalidationKind.Paint
             : base.ClassifyAttributeChange(name);
+    }
+
+    private void AnimateCheck(bool isChecked) {
+        _checkProgress.Retarget(isChecked ? 1f : 0f);
+        if (!IsMounted) {
+            _checkProgress.Seek(1);
+        }
+
+        InvalidatePaint();
+    }
+
+    private static Color LerpColor(Color from, Color to, float progress) {
+        return new Color(
+            Lerp(from.Red, to.Red, progress),
+            Lerp(from.Green, to.Green, progress),
+            Lerp(from.Blue, to.Blue, progress),
+            Lerp(from.Alpha, to.Alpha, progress));
+    }
+
+    private static byte Lerp(byte from, byte to, float progress) {
+        return (byte)Math.Clamp(
+            MathF.Round(from + ((to - from) * progress)),
+            0,
+            255);
     }
 
     private void AppendLabel(

@@ -10,13 +10,28 @@ public sealed partial class WindowManager {
         ThrowIfDisposed();
         ArgumentNullException.ThrowIfNull(options);
 
+        if (options.OwnerId is { } ownerId) {
+            if (!_windowsById.ContainsKey(ownerId) ||
+                _closingWindows.Contains(ownerId)) {
+                throw new ArgumentException(
+                    "The owner window must exist and must not be closing.",
+                    nameof(options));
+            }
+        } else if (options.IsModal) {
+            throw new ArgumentException(
+                "A modal window must have an owner.",
+                nameof(options));
+        }
+
         var windowId = new WindowId(++_nextWindowId);
         var initialDisplayScale = ResolveDisplayScale();
         var initialPixelSize = ToPhysicalSize(options.Size, initialDisplayScale);
         var windowDescriptor = new WindowDescriptor(
             windowId,
             options.Title,
-            initialPixelSize);
+            initialPixelSize,
+            options.OwnerId,
+            options.IsModal);
         IRenderTarget? target = null;
         Window? window = null;
         try {
@@ -36,6 +51,15 @@ public sealed partial class WindowManager {
                 initialDisplayScale);
             _windowsById.Add(windowId, window);
             _windows.Add(window);
+            if (options.OwnerId is { } registeredOwnerId) {
+                if (!_ownedWindows.TryGetValue(registeredOwnerId, out var owned)) {
+                    owned = [];
+                    _ownedWindows.Add(registeredOwnerId, owned);
+                }
+
+                owned.Add(windowId);
+            }
+
             window.RaiseLifecycle(WindowLifecycleKind.Opened);
             EnsureWindowCreationCompleted(window);
             WindowCreated?.Invoke(window);
@@ -45,6 +69,7 @@ public sealed partial class WindowManager {
             if (window is not null) {
                 _windows.Remove(window);
                 _windowsById.Remove(window.Id);
+                RemoveOwnedWindow(window);
             }
 
             try {
@@ -70,16 +95,65 @@ public sealed partial class WindowManager {
 
     internal bool CloseWindow(WindowId windowId, bool closePlatformHost) {
         ThrowIfDisposed();
-        var window = FindWindow(windowId);
-        if (window is null) {
+        if (FindWindow(windowId) is null) {
             return false;
         }
 
-        // Remove the window first so callbacks and reentrant close requests cannot
-        // observe or dispose the same window twice.
+        if (_closingWindows.Contains(windowId)) {
+            return true;
+        }
+
+        var closeOrder = GetCloseOrder(windowId);
+        foreach (var id in closeOrder) {
+            _closingWindows.Add(id);
+        }
+
+        List<Exception>? failures = null;
+        try {
+            foreach (var id in closeOrder) {
+                if (FindWindow(id) is null) {
+                    continue;
+                }
+
+                try {
+                    CloseSingleWindow(id, closePlatformHost);
+                } catch (Exception exception) {
+                    (failures ??= []).Add(exception);
+                }
+            }
+        } finally {
+            foreach (var id in closeOrder) {
+                _closingWindows.Remove(id);
+            }
+        }
+
+        if (failures is not null) {
+            throw new AggregateException(
+                $"Window '{windowId}' and its owned windows did not close cleanly.",
+                failures);
+        }
+
+        return true;
+    }
+
+    private void CloseSingleWindow(WindowId windowId, bool closePlatformHost) {
+        var window = FindWindow(windowId);
+        if (window is null) {
+            return;
+        }
+
+        // Detach the window before invoking callbacks so reentrant close requests
+        // cannot observe or dispose the same window twice.
         _windows.Remove(window);
         _windowsById.Remove(windowId);
+        RemoveOwnedWindow(window);
         List<Exception>? failures = null;
+        try {
+            WindowClosing?.Invoke(window);
+        } catch (Exception exception) {
+            (failures ??= []).Add(exception);
+        }
+
         if (closePlatformHost) {
             try {
                 _platformHost?.CloseWindow(windowId);
@@ -105,8 +179,39 @@ public sealed partial class WindowManager {
                 $"Window '{windowId}' did not close cleanly.",
                 failures);
         }
+    }
 
-        return true;
+    private List<WindowId> GetCloseOrder(WindowId rootId) {
+        var order = new List<WindowId>();
+        var visited = new HashSet<WindowId>();
+        Visit(rootId);
+        return order;
+
+        void Visit(WindowId windowId) {
+            if (!visited.Add(windowId)) {
+                return;
+            }
+
+            if (_ownedWindows.TryGetValue(windowId, out var children)) {
+                foreach (var childId in children) {
+                    Visit(childId);
+                }
+            }
+
+            order.Add(windowId);
+        }
+    }
+
+    private void RemoveOwnedWindow(Window window) {
+        if (window.Descriptor.OwnerId is not { } ownerId ||
+            !_ownedWindows.TryGetValue(ownerId, out var owned)) {
+            return;
+        }
+
+        owned.Remove(window.Id);
+        if (owned.Count == 0) {
+            _ownedWindows.Remove(ownerId);
+        }
     }
 
     private float ResolveDisplayScale() {

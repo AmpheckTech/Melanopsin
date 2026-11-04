@@ -6,18 +6,21 @@ namespace Melanopsin.Graphics.Backend.Skia;
 
 /// <summary>
 /// Optional OpenGL backend: WGL on Windows, EGL on Linux. Render layers are
-/// composed into GPU-backed Skia surfaces; platforms that cannot consume them
-/// fall back to a BGRA readback.
+/// composed into GPU-backed Skia surfaces; callers can request an explicit BGRA
+/// copy when a platform cannot consume the native surface.
 /// </summary>
 public sealed class SkiaGpuRenderBackend : IRenderBackend {
     private readonly FontFace _font;
     private readonly SKTypeface _typeface;
     private readonly ISkiaGpuContext _glContext;
+    private readonly SkiaRasterCacheOptions _rasterCacheOptions;
     private int _disposed;
     private Exception? _cleanupFailure;
 
-    public SkiaGpuRenderBackend(FontFace font)
-        : this(font, nativeDisplay: IntPtr.Zero) {
+    public SkiaGpuRenderBackend(
+        FontFace font,
+        SkiaRasterCacheOptions rasterCacheOptions = default)
+        : this(font, IntPtr.Zero, rasterCacheOptions) {
     }
 
     /// <summary>
@@ -25,8 +28,14 @@ public sealed class SkiaGpuRenderBackend : IRenderBackend {
     /// Wayland this must be the <c>wl_display</c> the window host uses, so EGL
     /// surfaces share its connection and event queue. The caller keeps ownership.
     /// </summary>
-    public SkiaGpuRenderBackend(FontFace font, IntPtr nativeDisplay) {
+    public SkiaGpuRenderBackend(
+        FontFace font,
+        IntPtr nativeDisplay,
+        SkiaRasterCacheOptions rasterCacheOptions = default) {
         ArgumentNullException.ThrowIfNull(font);
+        _rasterCacheOptions = rasterCacheOptions == default
+            ? SkiaRasterCacheOptions.Default
+            : rasterCacheOptions;
         _font = font;
         var glContext = CreateGpuContext(nativeDisplay);
         try {
@@ -60,7 +69,8 @@ public sealed class SkiaGpuRenderBackend : IRenderBackend {
             descriptor,
             _font,
             _typeface,
-            _glContext);
+            _glContext,
+            _rasterCacheOptions);
     }
 
     public void Dispose() {

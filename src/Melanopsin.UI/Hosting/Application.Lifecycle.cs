@@ -10,6 +10,7 @@ public sealed partial class Application {
         }
 
         _windows.WindowCreated -= OnWindowCreated;
+        _windows.WindowClosing -= OnWindowClosing;
         Exception? failure = null;
         try {
             _runtime.Dispose();
@@ -33,6 +34,7 @@ public sealed partial class Application {
         }
 
         _windows.WindowCreated -= OnWindowCreated;
+        _windows.WindowClosing -= OnWindowClosing;
         Exception? failure = null;
         try {
             await _runtime.DisposeAsync().ConfigureAwait(false);

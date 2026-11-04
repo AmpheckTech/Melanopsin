@@ -1,3 +1,4 @@
+using Melanopsin.UI.Animation;
 using Melanopsin.UI.Accessibility;
 using Melanopsin.UI.Input;
 using Melanopsin.UI.Markup;
@@ -9,11 +10,19 @@ namespace Melanopsin.UI.Controls;
 public sealed class RadioButton :
     Control,
     IInputHandler,
+    IAnimationParticipant,
     IRenderCommandProvider,
     IAccessibilityActionProvider {
+    private static readonly Color UnselectedBorderColor = new(105, 125, 118);
     private string _text = string.Empty;
     private Color _accentColor = new(32, 112, 90);
     private bool _isSelected;
+    private readonly Tween<float> _selectionProgress = new(
+        0,
+        0,
+        TimeSpan.FromMilliseconds(150),
+        static (from, to, progress) => from + ((to - from) * progress),
+        Easing.EaseOut);
 
     public RadioButton()
         : base("RadioButton") {
@@ -66,6 +75,7 @@ public sealed class RadioButton :
 
             _isSelected = value;
             SetState(UiStateNames.Selected, value);
+            AnimateSelection(value);
         }
     }
 
@@ -98,7 +108,12 @@ public sealed class RadioButton :
             return;
         }
 
-        var phase = inputEvent.Input.Phase;
+        var input = inputEvent.Input;
+        if (!input.IsPrimaryButton) {
+            return;
+        }
+
+        var phase = input.Phase;
         if (phase == PointerPhase.Down) {
             SetState(UiStateNames.Pressed, true);
         } else if (phase == PointerPhase.Up) {
@@ -115,6 +130,7 @@ public sealed class RadioButton :
     public void AppendRenderCommands(
         RenderCommandContext context,
         List<RenderCommand> commands) {
+        var progress = Math.Clamp(_selectionProgress.Value, 0, 1);
         var marker = context.FontSize;
         var markerX = context.Bounds.Right - context.Padding - marker;
         var markerY = context.Bounds.Y + ((context.Bounds.Height - marker) / 2);
@@ -124,11 +140,11 @@ public sealed class RadioButton :
             marker / 2));
         commands.Add(new StrokeRectangleCommand(
             new Rect(markerX, markerY, marker, marker),
-            IsSelected ? AccentColor : new Color(105, 125, 118),
+            LerpColor(UnselectedBorderColor, AccentColor, progress),
             Math.Max(1, context.FontSize / 14),
             marker / 2));
-        if (IsSelected) {
-            var dot = marker * 0.42f;
+        if (progress > 0) {
+            var dot = marker * 0.42f * progress;
             commands.Add(new FillRectangleCommand(
                 new Rect(
                     markerX + ((marker - dot) / 2),
@@ -155,6 +171,20 @@ public sealed class RadioButton :
         }
     }
 
+    bool IAnimationParticipant.AdvanceAnimation(float elapsedSeconds) {
+        if (!_selectionProgress.Advance(elapsedSeconds)) {
+            return false;
+        }
+
+        InvalidatePaint();
+        return _selectionProgress.IsPlaying;
+    }
+
+    protected internal override void OnUnmounted() {
+        _selectionProgress.Pause();
+        base.OnUnmounted();
+    }
+
     protected override void OnSetAttribute(string name, object? value) {
         base.OnSetAttribute(name, value);
         switch (name) {
@@ -175,6 +205,30 @@ public sealed class RadioButton :
         return name == "selected"
             ? InvalidationKind.Paint
             : base.ClassifyAttributeChange(name);
+    }
+
+    private void AnimateSelection(bool isSelected) {
+        _selectionProgress.Retarget(isSelected ? 1f : 0f);
+        if (!IsMounted) {
+            _selectionProgress.Seek(1);
+        }
+
+        InvalidatePaint();
+    }
+
+    private static Color LerpColor(Color from, Color to, float progress) {
+        return new Color(
+            Lerp(from.Red, to.Red, progress),
+            Lerp(from.Green, to.Green, progress),
+            Lerp(from.Blue, to.Blue, progress),
+            Lerp(from.Alpha, to.Alpha, progress));
+    }
+
+    private static byte Lerp(byte from, byte to, float progress) {
+        return (byte)Math.Clamp(
+            MathF.Round(from + ((to - from) * progress)),
+            0,
+            255);
     }
 
     private void DeselectSiblings() {

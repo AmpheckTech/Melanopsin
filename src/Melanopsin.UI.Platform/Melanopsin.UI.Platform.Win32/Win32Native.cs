@@ -9,8 +9,11 @@ internal static class Win32Native {
     internal const uint PmRemove = 0x0001;
     internal const int CwUseDefault = unchecked((int)0x80000000);
     internal const uint WsOverlappedWindow = 0x00CF0000;
+    internal const uint SwpNoMove = 0x0002;
     internal const uint SwpNoZOrder = 0x0004;
     internal const uint SwpNoActivate = 0x0010;
+    internal const uint SwpNoSize = 0x0001;
+    internal const uint SwpFrameChanged = 0x0020;
     internal const uint SpiGetWorkArea = 0x0030;
     internal const uint TmeLeave = 0x00000002;
     internal const int IdcArrow = 32512;
@@ -58,12 +61,61 @@ internal static class Win32Native {
     internal const uint WmEraseBackground = 0x0014;
     internal const uint WmUser = 0x0400;
     internal const int HtClient = 1;
+    internal const uint CfUnicodeText = 13;
+    internal const uint GmemMoveable = 0x0002;
+    internal const uint NimAdd = 0;
+    internal const uint NimModify = 1;
+    internal const uint NimDelete = 2;
+    internal const uint NifMessage = 0x00000001;
+    internal const uint NifIcon = 0x00000002;
+    internal const uint NifTip = 0x00000004;
+    internal const uint NifInfo = 0x00000010;
+    internal const uint NiifInfo = 0x00000001;
+    internal const uint NiifRespectQuietTime = 0x00000080;
+    internal const int IdiApplication = 32512;
+    internal const int GwlpHwndParent = -8;
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     internal static extern IntPtr GetModuleHandleW(string? moduleName);
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     internal static extern IntPtr LoadCursorW(IntPtr instance, IntPtr cursorName);
+
+    [DllImport("user32.dll")]
+    internal static extern IntPtr LoadIconW(IntPtr instance, IntPtr iconName);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern bool OpenClipboard(IntPtr owner);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern bool EmptyClipboard();
+
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern IntPtr GetClipboardData(uint format);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern IntPtr SetClipboardData(uint format, IntPtr memory);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern bool CloseClipboard();
+
+    [DllImport("user32.dll")]
+    internal static extern bool IsClipboardFormatAvailable(uint format);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern IntPtr GlobalAlloc(uint flags, UIntPtr bytes);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern IntPtr GlobalLock(IntPtr memory);
+
+    [DllImport("kernel32.dll")]
+    internal static extern bool GlobalUnlock(IntPtr memory);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern IntPtr GlobalFree(IntPtr memory);
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    internal static extern bool Shell_NotifyIconW(uint message, ref NotifyIconData data);
 
     [DllImport("user32.dll")]
     internal static extern IntPtr SetCursor(IntPtr cursor);
@@ -91,6 +143,21 @@ internal static class Win32Native {
 
     [DllImport("user32.dll", SetLastError = true)]
     internal static extern bool DestroyWindow(IntPtr window);
+
+    [DllImport("user32.dll")]
+    internal static extern bool EnableWindow(IntPtr window, bool enable);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
+    internal static extern IntPtr SetWindowLongPtrW(
+        IntPtr window,
+        int index,
+        IntPtr newValue);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongW", SetLastError = true)]
+    internal static extern int SetWindowLongW(
+        IntPtr window,
+        int index,
+        int newValue);
 
     [DllImport("user32.dll")]
     internal static extern bool ShowWindow(IntPtr window, int command);

@@ -151,6 +151,10 @@ public sealed class OverlayHost :
     public bool HasModalOverlay =>
         _overlays.Any(static overlay => overlay.IsModal && overlay.IsOpen);
 
+    public bool HasDismissibleOverlay =>
+        TopOverlay is { IsOpen: true } overlay &&
+        (overlay.IsModal || overlay.DismissOnBackdrop);
+
     private void OnOverlayClosed(Overlay overlay) {
         overlay.Closed -= OnOverlayClosed;
         _ = _overlays.Remove(overlay);
@@ -168,6 +172,9 @@ public sealed class OverlayHost :
     }
 
     private void UpdateBackdrop() {
-        _backdrop.SetVisible(_overlays.Any(static overlay => overlay.IsModal));
+        var top = TopOverlay;
+        _backdrop.SetVisible(top is not null &&
+            (top.IsModal || top.DismissOnBackdrop));
+        _backdrop.IsDimmed = top?.IsModal == true;
     }
 }

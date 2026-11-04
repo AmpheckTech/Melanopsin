@@ -26,7 +26,7 @@ internal sealed partial class SkiaRenderTarget {
                 _gpuTarget = target;
                 _pixelReader.ResizeGpu(size, _gpuSurface);
                 Descriptor = descriptor;
-                _hasFrame = false;
+                InvalidateFrame();
                 return true;
             }
 
@@ -51,7 +51,7 @@ internal sealed partial class SkiaRenderTarget {
             _canvas = surface.Canvas;
             _pixelReader.ResizeGpu(size, surface);
             Descriptor = descriptor;
-            _hasFrame = false;
+            InvalidateFrame();
 
             Exception? cleanupFailure = null;
             SkiaCleanup.Capture(ref cleanupFailure, previousSurface.Dispose);

@@ -59,6 +59,8 @@ internal sealed class WaylandConnection : IDisposable {
 
     public WlSeat? Seat { get; private set; }
 
+    public WlDataDeviceManager? DataDeviceManager { get; private set; }
+
     public WpFractionalScaleManagerV1? FractionalScaleManager { get; private set; }
 
     public WpCursorShapeManagerV1? CursorShapeManager { get; private set; }
@@ -109,6 +111,13 @@ internal sealed class WaylandConnection : IDisposable {
         DisposeProxy(CursorShapeManager, static value => value.Destroy());
         DisposeProxy(Viewporter, static value => value.Destroy());
         DisposeProxy(FractionalScaleManager, static value => value.Destroy());
+        DisposeProxy(
+            DataDeviceManager,
+            static value => {
+                if (value.IsReleaseAvailable) {
+                    value.Release();
+                }
+            });
         foreach (var output in _outputs) {
             DisposeProxy(
                 output,
@@ -170,6 +179,13 @@ internal sealed class WaylandConnection : IDisposable {
                     Math.Min(version, 8),
                     _seatListener,
                     _display);
+                break;
+            case "wl_data_device_manager":
+                DataDeviceManager = Registry.Bind<WlDataDeviceManager>(
+                    name,
+                    Math.Min(version, 3),
+                    listener: null,
+                    queue: null);
                 break;
             case "wl_output":
                 _outputs.Add(Registry.Bind<WlOutput>(

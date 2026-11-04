@@ -45,6 +45,10 @@ public sealed partial class ScrollViewport {
             }
 
             if (phase is PointerPhase.Up or PointerPhase.Cancel) {
+                if (!inputEvent.Input.IsPrimaryButton) {
+                    return false;
+                }
+
                 EndThumbDrag();
                 inputEvent.Handled = true;
                 return true;

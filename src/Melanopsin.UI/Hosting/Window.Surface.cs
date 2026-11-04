@@ -17,7 +17,9 @@ public sealed partial class Window {
             Descriptor = new WindowDescriptor(
                 previousDescriptor.Id,
                 previousDescriptor.Title,
-                size);
+                size,
+                previousDescriptor.OwnerId,
+                previousDescriptor.IsModal);
             _pendingDamage = new DamageRegionBuilder(size);
             InvalidateViewport(forceFullDamage: true);
             return;
@@ -26,21 +28,17 @@ public sealed partial class Window {
         var replacement = _targetFactory(targetDescriptor);
         var previous = _target;
         _target = replacement;
+        _retiredTargets.Add(previous);
         Descriptor = new WindowDescriptor(
             previousDescriptor.Id,
             previousDescriptor.Title,
-            size);
-        try {
-            previous.Dispose();
-        } catch {
-            replacement.Dispose();
-            _target = previous;
-            Descriptor = previousDescriptor;
-            throw;
-        }
+            size,
+            previousDescriptor.OwnerId,
+            previousDescriptor.IsModal);
 
         _pendingDamage = new DamageRegionBuilder(size);
         InvalidateViewport(forceFullDamage: true);
+        DrainRetiredTargets();
     }
 
     public void SetDisplayScale(float scaleFactor) {

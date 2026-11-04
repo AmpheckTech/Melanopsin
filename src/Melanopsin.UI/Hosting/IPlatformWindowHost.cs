@@ -5,6 +5,10 @@ public interface IPlatformWindowHost : IFramePresenter, IDisposable {
 
     float DisplayScale { get; }
 
+    IPlatformClipboard? Clipboard => null;
+
+    IPlatformNotifications? Notifications => null;
+
     /// <summary>
     /// Returns whether a frame can currently be submitted. Callers should leave
     /// the window dirty and retry after the next platform event when this is
@@ -19,6 +23,11 @@ public interface IPlatformWindowHost : IFramePresenter, IDisposable {
     void SetCursor(WindowId windowId, CursorKind cursor) {
     }
 
+    /// <summary>
+    /// Releases all platform resources associated with a window. If the host
+    /// retains an accepted frame lease, it must release that lease before this
+    /// method returns so the render target can be safely reclaimed.
+    /// </summary>
     void CloseWindow(WindowId windowId);
 
     bool TryDequeueEvent(out WindowEvent windowEvent);

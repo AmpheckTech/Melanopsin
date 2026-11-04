@@ -59,6 +59,18 @@ public abstract partial class Node : IContextStore {
 
     public event Action<PointerInputEvent>? PointerReleased;
 
+    /// <summary>
+    /// Raised when the secondary mouse button requests a context menu. The
+    /// event bubbles from the hit target to its ancestors.
+    /// </summary>
+    public event Action<ContextMenuRequest>? ContextRequested;
+
+    /// <summary>
+    /// Raised when the middle mouse button completes a click. The event
+    /// bubbles from the hit target to its ancestors.
+    /// </summary>
+    public event Action<MiddleClickRequest>? MiddleClicked;
+
     public event Action<Node>? Mounted;
 
     public event Action<Node>? Unmounted;
@@ -340,4 +352,11 @@ public abstract partial class Node : IContextStore {
         handler?.Invoke(input);
     }
 
+    internal void RaiseContextRequested(ContextMenuRequest request) {
+        ContextRequested?.Invoke(request);
+    }
+
+    internal void RaiseMiddleClicked(MiddleClickRequest request) {
+        MiddleClicked?.Invoke(request);
+    }
 }

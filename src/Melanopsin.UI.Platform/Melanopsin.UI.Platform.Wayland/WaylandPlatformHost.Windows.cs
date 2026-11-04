@@ -10,11 +10,9 @@ public sealed partial class WaylandPlatformHost {
         }
 
         _windowsByHandle.Remove(window.Handle);
-        _pendingFrames.Remove(windowId);
         _configureTimestamps.Remove(windowId);
         _pendingFrameTimestamps.Remove(windowId);
         _frameCallbackTimestamps.Remove(windowId);
-        ReleaseWindowGpuSurface(window);
         window.Dispose();
         UpdateDisplayScale();
     }
@@ -37,9 +35,8 @@ public sealed partial class WaylandPlatformHost {
             ToLogicalDimension(descriptor.Size.Width, scale),
             ToLogicalDimension(descriptor.Size.Height, scale));
         var window = new WaylandWindow(
-            descriptor.Id,
+            descriptor,
             _connection,
-            descriptor.Title,
             descriptor.Size,
             logicalSize,
             scale,
@@ -50,12 +47,23 @@ public sealed partial class WaylandPlatformHost {
         _windowsByHandle.Add(window.Handle, window);
 
         try {
+            var parent = descriptor.OwnerId is { } ownerId &&
+                _windows.TryGetValue(ownerId, out var owner)
+                    ? owner.Decoration
+                    : null;
             var decoration = _decorationContext.Decorate(
                 window,
                 window.Surface,
                 descriptor.Title,
-                logicalSize);
+                logicalSize,
+                parent);
             window.AttachDecoration(decoration);
+            foreach (var child in _windows.Values) {
+                if (child.OwnerId == window.Id) {
+                    child.Decoration?.SetParent(decoration);
+                }
+            }
+
             _connection.FlushChecked();
         } catch {
             _windows.Remove(window.Id);

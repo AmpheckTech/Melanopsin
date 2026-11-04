@@ -345,6 +345,57 @@ Button.quiet-action {
     padding: 0.5su;
 }
 
+.controls-sample {
+    background: transparent;
+    padding: 0.5su;
+}
+
+.controls-workbench {
+    background: transparent;
+    padding: 0px;
+}
+
+.controls-lower {
+    background: transparent;
+    padding: 2su;
+}
+
+.control-panel {
+    background: $surface-soft;
+    border-color: $border;
+    border-width: $hairline;
+    border-radius: $radius-panel;
+    padding: 2su;
+}
+
+.control-hint,
+.control-copy {
+    color: $muted-ink;
+    font-size: $small-size;
+    padding: 0px;
+}
+
+.pointer-target {
+    min-height: 8su;
+}
+
+.pointer-notes {
+    background: $surface;
+    border-color: $border;
+    border-width: $hairline;
+    border-radius: $radius-control;
+    padding: 1.5su;
+}
+
+.control-list {
+    background: $surface;
+    color: $ink;
+    border-color: $border;
+    border-width: $hairline;
+    border-radius: $radius-control;
+    padding: 1su;
+}
+
 .code-sample {
     background: transparent;
     padding: 0.5su;

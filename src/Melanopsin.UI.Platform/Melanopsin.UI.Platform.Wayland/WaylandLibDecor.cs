@@ -43,7 +43,8 @@ internal sealed unsafe class WaylandLibDecorContext : IDisposable {
         WaylandWindow window,
         WlSurface surface,
         string title,
-        PixelSize initialLogicalSize) {
+        PixelSize initialLogicalSize,
+        WaylandDecoration? parent = null) {
         lock (_lifetimeLock) {
             ObjectDisposedException.ThrowIf(_disposed, this);
             return new WaylandDecoration(
@@ -51,7 +52,8 @@ internal sealed unsafe class WaylandLibDecorContext : IDisposable {
                 window,
                 surface,
                 title,
-                initialLogicalSize);
+                initialLogicalSize,
+                parent);
         }
     }
 
@@ -129,7 +131,8 @@ internal sealed unsafe class WaylandDecoration : IDisposable {
         WaylandWindow window,
         WlSurface surface,
         string title,
-        PixelSize initialLogicalSize) {
+        PixelSize initialLogicalSize,
+        WaylandDecoration? parent) {
         _context = context;
         Window = window;
         InitialLogicalSize = initialLogicalSize;
@@ -148,6 +151,7 @@ internal sealed unsafe class WaylandDecoration : IDisposable {
         try {
             LibDecorNative.FrameSetTitle(_frame, title);
             LibDecorNative.FrameSetAppId(_frame, "dev.melanopsin.demo");
+            LibDecorNative.FrameSetParent(_frame, parent?.FrameHandle ?? IntPtr.Zero);
             LibDecorNative.FrameMap(_frame);
         } catch {
             Dispose();
@@ -159,9 +163,16 @@ internal sealed unsafe class WaylandDecoration : IDisposable {
 
     public PixelSize InitialLogicalSize { get; }
 
+    private IntPtr FrameHandle => _frame;
+
     public void SetTitle(string title) {
         ObjectDisposedException.ThrowIf(_disposed, this);
         LibDecorNative.FrameSetTitle(_frame, title);
+    }
+
+    public void SetParent(WaylandDecoration? parent) {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        LibDecorNative.FrameSetParent(_frame, parent?.FrameHandle ?? IntPtr.Zero);
     }
 
     public void Dispose() {
@@ -360,6 +371,9 @@ internal static unsafe partial class LibDecorNative {
 
     [LibraryImport(LibraryName, EntryPoint = "libdecor_frame_map")]
     internal static partial void FrameMap(IntPtr frame);
+
+    [LibraryImport(LibraryName, EntryPoint = "libdecor_frame_set_parent")]
+    internal static partial void FrameSetParent(IntPtr frame, IntPtr parent);
 
     [LibraryImport(LibraryName, EntryPoint = "libdecor_frame_commit")]
     internal static partial void FrameCommit(

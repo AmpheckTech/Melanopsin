@@ -10,6 +10,11 @@ public sealed partial class Application {
             return;
         }
 
+        if (IsInputEvent(windowEvent.Kind) &&
+            _windows.IsInputBlocked(windowEvent.WindowId)) {
+            return;
+        }
+
         switch (windowEvent.Kind) {
             case WindowEventKind.CloseRequested:
                 CloseWindow(window);
@@ -140,14 +145,9 @@ public sealed partial class Application {
         _pendingWindowChanges.Clear();
     }
 
-    private void CloseWindow(Window window) {
+    private void OnWindowClosing(Window window) {
         var windowId = window.Id;
         List<Exception>? failures = null;
-        if (_cursorWindowId == windowId) {
-            _cursorWindowId = null;
-            _cursorKind = null;
-        }
-
         try {
             window.RaiseLifecycle(WindowLifecycleKind.CloseRequested);
         } catch (Exception exception) {
@@ -172,16 +172,9 @@ public sealed partial class Application {
             (failures ??= []).Add(exception);
         }
 
-        try {
-            _host.CloseWindow(windowId);
-        } catch (Exception exception) {
-            (failures ??= []).Add(exception);
-        }
-
-        try {
-            _windows.CloseWindow(windowId, closePlatformHost: false);
-        } catch (Exception exception) {
-            (failures ??= []).Add(exception);
+        if (_cursorWindowId == windowId) {
+            _cursorWindowId = null;
+            _cursorKind = null;
         }
 
         if (failures is not null) {
@@ -189,6 +182,17 @@ public sealed partial class Application {
                 $"Window '{windowId}' did not close cleanly.",
                 failures);
         }
+    }
+
+    private void CloseWindow(Window window) {
+        _windows.CloseWindow(window.Id);
+    }
+
+    private static bool IsInputEvent(WindowEventKind kind) {
+        return kind is
+            WindowEventKind.PointerInput or
+            WindowEventKind.KeyInput or
+            WindowEventKind.TextComposition;
     }
 
     private struct PendingWindowChange {

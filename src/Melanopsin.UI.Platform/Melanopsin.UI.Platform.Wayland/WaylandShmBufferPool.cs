@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Melanopsin.Graphics.Rendering;
 using NWayland;
 using NWayland.Protocols.Wayland;
 
@@ -204,8 +205,30 @@ internal sealed unsafe partial class WaylandShmBufferPool : IDisposable {
             IsReserved = false;
         }
 
-        internal void Commit(ReadOnlySpan<byte> pixels) {
-            pixels[.._size].CopyTo(new Span<byte>((void*)_data, _size));
+        internal bool TryCopyPixels(
+            ICpuReadableSurface source,
+            DamageRegion damage,
+            AccessibilityVisualOptions visualAccessibility) {
+            if (source.Size.Width != Width ||
+                source.Size.Height != Height ||
+                source.PixelFormat != RenderPixelFormat.Bgra8888Premultiplied) {
+                return false;
+            }
+
+            var destination = new Span<byte>((void*)_data, _size);
+            if (!source.TryCopyPixels(
+                    damage,
+                    visualAccessibility,
+                    destination,
+                    out var sourceStride) ||
+                sourceStride != Stride) {
+                return false;
+            }
+
+            return true;
+        }
+
+        internal void Commit() {
             IsReserved = false;
             IsInUse = true;
         }

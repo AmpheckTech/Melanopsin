@@ -6,15 +6,19 @@ namespace Melanopsin.Graphics.Backend.Skia;
 internal sealed partial class SkiaSceneRenderer : IDisposable {
     private readonly ISkiaGpuContext? _gpuContext;
     private readonly SkiaCommandRenderer _commandRenderer;
-    private readonly SkiaRasterCache _rasterCache = new();
+    private readonly SkiaRasterCache _rasterCache;
+    private readonly SkiaRasterCacheOptions _rasterCacheOptions;
     private readonly SKPaint _clearPaint = new();
     private bool _disposed;
 
     public SkiaSceneRenderer(
         FontFace? primaryFont,
         SKTypeface? typeface,
-        ISkiaGpuContext? gpuContext) {
+        ISkiaGpuContext? gpuContext,
+        SkiaRasterCacheOptions rasterCacheOptions) {
         _gpuContext = gpuContext;
+        _rasterCacheOptions = rasterCacheOptions;
+        _rasterCache = new SkiaRasterCache(rasterCacheOptions);
         _commandRenderer = new SkiaCommandRenderer(primaryFont, typeface);
     }
 

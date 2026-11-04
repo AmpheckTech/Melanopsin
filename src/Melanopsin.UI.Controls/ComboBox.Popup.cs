@@ -1,7 +1,7 @@
 namespace Melanopsin.UI.Controls;
 
 public sealed partial class ComboBox {
-    private readonly List<Node> _scrollObservers = [];
+    private readonly Dictionary<Node, (float X, float Y)> _scrollObservers = [];
     private ComboBoxPopup? _popup;
     private OverlayHost? _overlayHost;
     private Rect _triggerLayoutBounds;
@@ -127,13 +127,16 @@ public sealed partial class ComboBox {
         for (var current = Parent; current is not null; current = current.Parent) {
             if (current is IScrollTransform) {
                 current.Invalidated += OnScrollInvalidated;
-                _scrollObservers.Add(current);
+                _scrollObservers.Add(
+                    current,
+                    (((IScrollTransform)current).OffsetX,
+                     ((IScrollTransform)current).OffsetY));
             }
         }
     }
 
     private void ClearScrollObservers() {
-        foreach (var observer in _scrollObservers) {
+        foreach (var observer in _scrollObservers.Keys) {
             observer.Invalidated -= OnScrollInvalidated;
         }
 
@@ -142,13 +145,21 @@ public sealed partial class ComboBox {
 
     private void OnScrollInvalidated(NodeInvalidation invalidation) {
         if (_popup is null ||
-            !_scrollObservers.Contains(invalidation.Source)) {
+            !_scrollObservers.TryGetValue(
+                invalidation.Source,
+                out var previousOffset) ||
+            invalidation.Source is not IScrollTransform scrollTransform) {
             return;
         }
 
-        if (invalidation.Kind != InvalidationKind.None) {
-            SetExpanded(false);
+        var offset = (scrollTransform.OffsetX, scrollTransform.OffsetY);
+        if (Math.Abs(offset.OffsetX - previousOffset.X) < 0.001f &&
+            Math.Abs(offset.OffsetY - previousOffset.Y) < 0.001f) {
+            return;
         }
+
+        _scrollObservers[invalidation.Source] = offset;
+        SetExpanded(false);
     }
 
     private void OnComboBoxInvalidated(NodeInvalidation invalidation) {

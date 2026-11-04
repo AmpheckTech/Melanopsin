@@ -31,6 +31,10 @@ public sealed class GestureManager {
         ArgumentNullException.ThrowIfNull(input);
         var key = new PointerCaptureKey(input.WindowId, input.Device, input.PointerId);
         if (input.Phase == PointerPhase.Down) {
+            if (!input.IsPrimaryButton) {
+                return;
+            }
+
             _pointers[key] = new GesturePointerState(
                 input,
                 _hitTester.HitTest(input.WindowId, input.X, input.Y),

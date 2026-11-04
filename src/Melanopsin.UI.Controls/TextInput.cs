@@ -194,7 +194,12 @@ public sealed partial class TextInput :
     }
 
     public void Handle(RoutedInputEvent inputEvent) {
-        var phase = inputEvent.Input.Phase;
+        var input = inputEvent.Input;
+        if (!input.IsPrimaryButton) {
+            return;
+        }
+
+        var phase = input.Phase;
         if (phase is PointerPhase.Up or PointerPhase.Cancel) {
             var wasDragging = _dragging;
             _dragging = false;

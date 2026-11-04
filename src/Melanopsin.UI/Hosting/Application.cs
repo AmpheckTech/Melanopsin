@@ -57,6 +57,7 @@ public sealed partial class Application : IDisposable, IAsyncDisposable {
             new UiRuntime(dispatcher ?? new UiDispatcher());
         _dispatcher = _runtime.Dispatcher;
         _windows.WindowCreated += OnWindowCreated;
+        _windows.WindowClosing += OnWindowClosing;
         foreach (var window in _windows.Windows) {
             window.AttachRuntime(_runtime);
         }
@@ -151,17 +152,17 @@ public sealed partial class Application : IDisposable, IAsyncDisposable {
                 }
 
                 var animating = _windows.AdvanceAnimations(elapsedSeconds);
-                var frames = _windows.RenderDirty(_renderOptions);
+                var presentedFrames = _windows.RenderDirty(_renderOptions);
                 RefreshCursor();
                 var now = Environment.TickCount64;
-                if (frames.Count != 0 && now - _lastAccessibilityPublish >= 100) {
+                if (presentedFrames != 0 && now - _lastAccessibilityPublish >= 100) {
                     _accessibility.PublishAll();
                     _lastAccessibilityPublish = now;
                 }
 
                 _gestures.Advance();
                 if (!animating &&
-                    frames.Count == 0 &&
+                    presentedFrames == 0 &&
                     _input.ActivePointerCount == 0 &&
                     !_dispatcher.HasPendingWork) {
                     _host.WaitForEvent(timeoutMilliseconds: 100);
@@ -172,19 +173,19 @@ public sealed partial class Application : IDisposable, IAsyncDisposable {
                     frameStart - _lastResizeTimestamp <= ResizeActivityWindowTicks;
                 var targetFrameRate =
                     animating || _input.ActivePointerCount > 0 || resizeActive
-                    ? Math.Clamp(ActiveFrameRate, 30, 240)
-                    : Math.Clamp(IdleFrameRate, 15, 240);
+                    ? Math.Clamp(ActiveFrameRate, 1, 240)
+                    : Math.Clamp(IdleFrameRate, 1, 240);
                 var intervalTicks = Stopwatch.Frequency / (double)targetFrameRate;
                 var remainingTicks = intervalTicks - (Stopwatch.GetTimestamp() - frameStart);
                 if (resizeActive &&
-                    frames.Count == 0 &&
+                    presentedFrames == 0 &&
                     !_dispatcher.HasPendingWork) {
                     // No frame was produced because presentation is
                     // backpressured. Let the compositor's configure and
                     // frame-callback stream pace the resize instead of
                     // spinning and competing with it.
                     _host.WaitForEvent(timeoutMilliseconds: 100);
-                } else if (frames.Count != 0 && !_dispatcher.HasPendingWork) {
+                } else if (presentedFrames != 0 && !_dispatcher.HasPendingWork) {
                     if (remainingTicks > 0) {
                         // Let the platform event source pace frames when
                         // possible. On Wayland this wakes on the compositor
@@ -225,6 +226,24 @@ public sealed partial class Application : IDisposable, IAsyncDisposable {
 
     private void OnWindowCreated(Window window) {
         window.AttachRuntime(_runtime);
+        if (!window.Descriptor.IsModal) {
+            return;
+        }
+
+        foreach (var blockedWindow in _windows.Windows) {
+            if (!_windows.IsInputBlocked(blockedWindow.Id)) {
+                continue;
+            }
+
+            var windowId = blockedWindow.Id;
+            _input.CancelWindow(windowId);
+            _focus.CancelWindow(windowId);
+            _gestures.CancelWindow(windowId);
+            if (_cursorWindowId == windowId) {
+                _cursorWindowId = null;
+                _cursorKind = null;
+            }
+        }
     }
 
     private void InvalidateAllWindows() {

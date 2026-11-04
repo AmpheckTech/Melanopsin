@@ -52,6 +52,20 @@ public sealed class PointerInputEvent {
 
     public long Timestamp { get; }
 
+    /// <summary>
+    /// Gets whether this pointer event represents the primary action. Touch
+    /// input has no mouse button and is always primary.
+    /// </summary>
+    public bool IsPrimaryButton =>
+        Device != InputDeviceKind.Mouse ||
+        Button is MouseButtonKind.None or MouseButtonKind.Left;
+
+    public bool IsSecondaryButton =>
+        Device == InputDeviceKind.Mouse && Button == MouseButtonKind.Right;
+
+    public bool IsMiddleButton =>
+        Device == InputDeviceKind.Mouse && Button == MouseButtonKind.Middle;
+
     public PointerInputEvent WithPhase(PointerPhase phase) {
         return new PointerInputEvent(
             WindowId,

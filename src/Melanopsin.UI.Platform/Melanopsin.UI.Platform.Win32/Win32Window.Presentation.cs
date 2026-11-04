@@ -4,45 +4,47 @@ using Melanopsin.UI;
 namespace Melanopsin.UI.Platform.Win32;
 
 internal sealed partial class Win32Window {
-    public void Present(RenderFrame frame) {
+    public void Present(RenderFrameLease frame) {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        ArgumentNullException.ThrowIfNull(frame);
-
-        _gpuSurface = frame.GpuSurface;
-        if (_gpuSurface?.TryPresent(Handle) == true) {
-            return;
+        if (!frame.IsValid) {
+            throw new ArgumentException(
+                "The render frame lease is stale.",
+                nameof(frame));
         }
 
-        if (_gpuSurface is not null) {
-            var pixels = frame.Pixels.Span;
-            if (_gpuSurface.TryPresentPixels(
-                    Handle,
-                    pixels,
-                    frame.Stride)) {
+        var surface = frame.Surface;
+        if (frame.VisualAccessibility == default &&
+            surface is INativePresentationSurface nativeSurface) {
+            if (nativeSurface.TryPresentNative(Handle)) {
+                SetNativeSurface(nativeSurface);
                 return;
             }
+
+            ReleaseFailedNativePresentation(nativeSurface);
+        } else {
+            ReleaseNativeSurface();
         }
 
-        _gpuSurface = null;
-        if (frame.PixelFormat != RenderPixelFormat.Bgra8888Premultiplied) {
+        if (surface is not ICpuReadableSurface cpuSurface) {
             throw new NotSupportedException(
-                $"Win32 presenter requires BGRA8888 frames, got {frame.PixelFormat}.");
+                "The render surface cannot be presented to Win32.");
         }
 
-        if (_bitmapBits == IntPtr.Zero || _pixelSize != frame.Descriptor.Size) {
-            RecreateSurface(frame.Descriptor.Size);
+        if (surface.PixelFormat != RenderPixelFormat.Bgra8888Premultiplied) {
+            throw new NotSupportedException(
+                $"Win32 presenter requires BGRA8888 frames, got {surface.PixelFormat}.");
         }
 
-        var rowBytes = frame.Descriptor.Size.Width * 4;
-        CopyPixels(frame, rowBytes);
+        if (_bitmapBits == IntPtr.Zero || _pixelSize != surface.Size) {
+            RecreateSurface(surface.Size);
+        }
+
+        var rowBytes = checked(surface.Size.Width * 4);
+        CopyPixels(cpuSurface, frame.Damage, frame.VisualAccessibility, rowBytes);
         PaintNow(frame.Damage);
     }
 
     public void Paint(IntPtr deviceContext) {
-        if (_gpuSurface?.TryPresent(Handle) == true) {
-            return;
-        }
-
         if (_disposed || _bitmapBits == IntPtr.Zero) {
             return;
         }
@@ -88,16 +90,45 @@ internal sealed partial class Win32Window {
         }
     }
 
-    private unsafe void CopyPixels(RenderFrame frame, int rowBytes) {
+    private unsafe void CopyPixels(
+        ICpuReadableSurface surface,
+        DamageRegion damage,
+        AccessibilityVisualOptions visualAccessibility,
+        int rowBytes) {
         var destination = new Span<byte>(
             (void*)_bitmapBits,
-            checked(rowBytes * frame.Descriptor.Size.Height));
-        BgraFrameCopier.Copy(
-            frame.Pixels.Span,
-            frame.Stride,
-            destination,
-            rowBytes,
-            frame.Damage);
+            checked(rowBytes * surface.Size.Height));
+        if (!surface.TryCopyPixels(
+                damage,
+                visualAccessibility,
+                destination,
+                out _)) {
+            throw new InvalidOperationException(
+                "The render surface could not copy its pixels.");
+        }
+    }
+
+    private void SetNativeSurface(INativePresentationSurface surface) {
+        if (!ReferenceEquals(_nativeSurface, surface)) {
+            ReleaseNativeSurface();
+            _nativeSurface = surface;
+        }
+    }
+
+    private void ReleaseNativeSurface() {
+        if (_nativeSurface is { } surface) {
+            _nativeSurface = null;
+            surface.ReleaseNativeTarget(Handle);
+        }
+    }
+
+    private void ReleaseFailedNativePresentation(
+        INativePresentationSurface attempted) {
+        if (!ReferenceEquals(_nativeSurface, attempted)) {
+            attempted.ReleaseNativeTarget(Handle);
+        }
+
+        ReleaseNativeSurface();
     }
 
     private void RecreateSurface(PixelSize size) {

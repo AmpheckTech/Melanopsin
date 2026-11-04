@@ -71,7 +71,7 @@ public sealed partial class FocusManager {
         pending.Push(root);
         while (pending.Count != 0) {
             var node = pending.Pop();
-            if (node is OverlayHost { HasModalOverlay: true } host &&
+            if (node is OverlayHost { HasDismissibleOverlay: true } host &&
                 host.TopOverlay is { } overlay) {
                 targetHost = host;
                 targetOverlay = overlay;

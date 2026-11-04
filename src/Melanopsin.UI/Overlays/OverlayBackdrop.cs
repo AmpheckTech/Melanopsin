@@ -16,16 +16,27 @@ internal sealed class OverlayBackdrop : Control, IInputHandler, IRenderCommandPr
 
     public Action? Clicked { get; set; }
 
+    public bool IsDimmed { get; set; } = true;
+
     public void AppendRenderCommands(
         RenderCommandContext context,
         List<RenderCommand> commands) {
+        if (!IsDimmed) {
+            return;
+        }
+
         commands.Add(new FillRectangleCommand(
             context.Bounds,
             new Color(12, 20, 18, 92)));
     }
 
     public void Handle(RoutedInputEvent inputEvent) {
-        var phase = inputEvent.Input.Phase;
+        var input = inputEvent.Input;
+        if (input.Phase != PointerPhase.Scroll && !input.IsPrimaryButton) {
+            return;
+        }
+
+        var phase = input.Phase;
         if (phase == PointerPhase.Down) {
             _pressed = true;
             inputEvent.Handled = true;

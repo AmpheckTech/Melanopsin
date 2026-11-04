@@ -9,7 +9,12 @@ public sealed partial class Slider {
             return;
         }
 
-        var phase = inputEvent.Input.Phase;
+        var input = inputEvent.Input;
+        if (!input.IsPrimaryButton) {
+            return;
+        }
+
+        var phase = input.Phase;
         if (phase == PointerPhase.Down) {
             _dragging = true;
             SetFromPosition(inputEvent.LayoutX);

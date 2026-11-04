@@ -103,6 +103,10 @@ public sealed partial class ScrollViewport :
         }
 
         if (input.Phase == PointerPhase.Down) {
+            if (!input.IsPrimaryButton) {
+                return;
+            }
+
             _dragPointer = input.PointerId;
             _candidateX = input.X;
             _candidateY = input.Y;
@@ -112,6 +116,10 @@ public sealed partial class ScrollViewport :
         }
 
         if (input.PointerId != _dragPointer) {
+            return;
+        }
+
+        if (!input.IsPrimaryButton) {
             return;
         }
 

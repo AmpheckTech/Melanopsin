@@ -25,6 +25,8 @@ public sealed partial class WindowManager : IWindowHitTester, IDisposable {
     private readonly bool _ownsBackend;
     private readonly List<Window> _windows = [];
     private readonly Dictionary<WindowId, Window> _windowsById = [];
+    private readonly Dictionary<WindowId, List<WindowId>> _ownedWindows = [];
+    private readonly HashSet<WindowId> _closingWindows = [];
     private readonly IReadOnlyList<Window> _windowsView;
     private long _nextWindowId;
     private int _disposed;
@@ -63,6 +65,12 @@ public sealed partial class WindowManager : IWindowHitTester, IDisposable {
 
     public event Action<Window>? WindowCreated;
 
+    /// <summary>
+    /// Raised after a window has been detached from the manager. Closing an
+    /// owner raises this event for its descendants first, then for the owner.
+    /// </summary>
+    public event Action<Window>? WindowClosing;
+
     public event Action<Window>? WindowClosed;
 
     public long TotalFramesPresented { get; private set; }
@@ -80,6 +88,51 @@ public sealed partial class WindowManager : IWindowHitTester, IDisposable {
     public Window? FindWindow(WindowId windowId) {
         ThrowIfDisposed();
         return _windowsById.GetValueOrDefault(windowId);
+    }
+
+    public IReadOnlyList<Window> GetOwnedWindows(WindowId ownerId) {
+        ThrowIfDisposed();
+        if (!_ownedWindows.TryGetValue(ownerId, out var ids)) {
+            return [];
+        }
+
+        var owned = new List<Window>(ids.Count);
+        foreach (var id in ids) {
+            if (_windowsById.TryGetValue(id, out var window)) {
+                owned.Add(window);
+            }
+        }
+
+        return owned;
+    }
+
+    /// <summary>
+    /// Whether input for this window is currently blocked by a modal descendant.
+    /// Platform hosts may also enforce this state natively.
+    /// </summary>
+    public bool IsInputBlocked(WindowId windowId) {
+        ThrowIfDisposed();
+        var pending = new Stack<WindowId>();
+        pending.Push(windowId);
+        while (pending.TryPop(out var id)) {
+            if (!_ownedWindows.TryGetValue(id, out var owned)) {
+                continue;
+            }
+
+            foreach (var childId in owned) {
+                if (!_windowsById.TryGetValue(childId, out var child)) {
+                    continue;
+                }
+
+                if (child.Descriptor.IsModal) {
+                    return true;
+                }
+
+                pending.Push(childId);
+            }
+        }
+
+        return false;
     }
 
     IEnumerable<WindowId> IWindowTreeQuery.WindowIds =>
@@ -136,6 +189,14 @@ public sealed partial class WindowManager : IWindowHitTester, IDisposable {
         List<Exception>? failures = null;
         try {
             foreach (var window in _windows) {
+                if (_platformHost is not null) {
+                    try {
+                        _platformHost.CloseWindow(window.Id);
+                    } catch (Exception exception) {
+                        (failures ??= []).Add(exception);
+                    }
+                }
+
                 try {
                     window.Dispose();
                 } catch (Exception exception) {
@@ -145,6 +206,8 @@ public sealed partial class WindowManager : IWindowHitTester, IDisposable {
         } finally {
             _windows.Clear();
             _windowsById.Clear();
+            _ownedWindows.Clear();
+            _closingWindows.Clear();
             if (_ownsBackend) {
                 try {
                     _backend.Dispose();

@@ -1,0 +1,205 @@
+<LinearLayout
+  package="Melanopsin.UI.Demo.Views"
+  component="ControlsSample"
+  class="controls-sample"
+  orientation="vertical"
+  spacing="0px"
+  width="100%">
+  <FlexLayout
+    class="page-intro"
+    direction="row"
+    align-items="end"
+    justify-content="space-between"
+    column-gap="4su"
+    width="100%"
+    height="18su"
+    flex-shrink="0">
+    <FlexLayout
+      class="intro-copy"
+      direction="column"
+      justify-content="end"
+      row-gap="0.6su"
+      width="0px"
+      height="100%"
+      flex-grow="1">
+      <TextBlock class="eyebrow" text="Controls" wrap="false" />
+      <TextBlock class="page-title" text="Input and controls" wrap="false" />
+      <TextBlock
+        class="page-summary"
+        text="Primary, middle and secondary mouse actions have distinct event routes. Try each control below."
+        wrap="false" />
+    </FlexLayout>
+    <FlexLayout
+      class="run-info"
+      direction="column"
+      justify-content="end"
+      align-items="end"
+      row-gap="0.8su"
+      width="27su"
+      height="100%"
+      flex-shrink="0">
+      <TextBlock class="run-status" text="Live controls" wrap="false" />
+      <TextBlock class="run-note" text="Pointer routing" wrap="false" />
+    </FlexLayout>
+  </FlexLayout>
+
+  <FlexLayout
+    class="controls-workbench"
+    direction="row"
+    column-gap="2su"
+    width="100%">
+    <LinearLayout
+      class="control-panel"
+      orientation="vertical"
+      spacing="1.4su"
+      width="0px"
+      flex-grow="1">
+      <TextBlock class="section-title" text="Pointer buttons" wrap="false" />
+      <TextBlock
+        class="control-hint"
+        text="Left invokes Clicked. Middle invokes MiddleClicked only after a matching press and release. Right opens the context menu."
+        width="100%" />
+
+      <Button
+        class="quiet-action pointer-target"
+        text="{{ PrimaryStatus }}"
+        width="100%"
+        height="8su"
+        onClicked="HandlePrimary()"
+        onPointerPressed="HandlePointerPressed($event)"
+        onMiddleClicked="HandleMiddle($event)" />
+      <Button
+        class="quiet-action pointer-target"
+        text="{{ ContextStatus }}"
+        width="100%"
+        height="8su"
+        onClicked="HandlePrimary()"
+        onContextRequested="OpenContextMenu($event)" />
+
+      <LinearLayout class="pointer-notes" orientation="vertical" spacing="0.7su" width="100%">
+        <TextBlock class="type-label" text="MIDDLE" wrap="false" />
+        <TextBlock class="control-copy" text="{{ MiddleStatus }}" width="100%" wrap="false" />
+        <TextBlock class="type-label" text="AUXILIARY" wrap="false" />
+        <TextBlock class="control-copy" text="Right release emits ContextRequested; it never becomes a normal click." width="100%" />
+      </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+      class="control-panel"
+      orientation="vertical"
+      spacing="1.4su"
+      width="0px"
+      flex-grow="1">
+      <TextBlock class="section-title" text="Form controls" wrap="false" />
+      <CheckBox
+        text="Reduce motion"
+        checked="{{ ReduceMotion }}"
+        width="100%"
+        onCheckedChanged="SetReduceMotion($event)" />
+      <Switch
+        text="Show diagnostics"
+        on="{{ ShowDiagnostics }}"
+        width="100%"
+        onToggled="SetDiagnostics($event)" />
+      <FlexLayout direction="row" column-gap="1su" width="100%">
+        <RadioButton
+          text="Compact"
+          group="density"
+          selected="{{ IsCompact }}"
+          width="0px"
+          flex-grow="1"
+          onSelected="ChooseCompact()" />
+        <RadioButton
+          text="Comfortable"
+          group="density"
+          selected="{{ IsComfortable }}"
+          width="0px"
+          flex-grow="1"
+          onSelected="ChooseComfortable()" />
+      </FlexLayout>
+      <Input
+        text="{{ DisplayName }}"
+        placeholder="Your name"
+        width="100%"
+        onTextChanged="SetDisplayName($event)"
+        onSubmitted="SubmitName($event)" />
+      <ComboBox
+        items="Compact|Comfortable|Spacious"
+        selected-index="{{ DensityIndex }}"
+        width="100%" />
+      <LinearLayout orientation="vertical" spacing="0.4su" width="100%">
+        <TextBlock class="type-label" text="{{ VolumeLabel }}" wrap="false" />
+        <Slider
+          value="{{ Volume }}"
+          minimum="0"
+          maximum="100"
+          step="5"
+          width="100%"
+          onValueChanged="SetVolume($event)" />
+        <ProgressBar value="{{ Volume }}" maximum="100" width="100%" height="3su" />
+      </LinearLayout>
+    </LinearLayout>
+  </FlexLayout>
+
+  <FlexLayout
+    class="controls-lower"
+    direction="row"
+    column-gap="2su"
+    width="100%">
+    <LinearLayout
+      class="control-panel"
+      orientation="vertical"
+      spacing="1su"
+      width="0px"
+      flex-grow="1">
+      <FlexLayout direction="row" align-items="center" justify-content="space-between" width="100%">
+        <TextBlock class="section-title" text="Virtual list" wrap="false" />
+        <TextBlock class="type-label" text="{{ ListSummary }}" wrap="false" />
+      </FlexLayout>
+      <VirtualList
+        class="control-list"
+        item-count="60"
+        row-height="28"
+        width="100%"
+        height="22su"
+        onSelectedIndexChanged="SelectListRow($event)" />
+    </LinearLayout>
+
+    <LinearLayout
+      class="control-panel"
+      orientation="vertical"
+      spacing="1.2su"
+      width="0px"
+      flex-grow="1">
+      <TextBlock class="section-title" text="Platform services" wrap="false" />
+      <TextBlock
+        class="control-hint"
+        text="Clipboard and notifications are optional capabilities supplied by the active platform host."
+        width="100%" />
+      <FlexLayout direction="row" column-gap="1su" width="100%">
+        <Button
+          class="quiet-action"
+          text="Copy"
+          width="0px"
+          height="7su"
+          flex-grow="1"
+          onClicked="CopyName()" />
+        <Button
+          class="quiet-action"
+          text="Notify"
+          width="0px"
+          height="7su"
+          flex-grow="1"
+          onClicked="Notify()" />
+        <Button
+          class="quiet-action"
+          text="Dialog"
+          width="0px"
+          height="7su"
+          flex-grow="1"
+          onClicked="ShowDialog()" />
+      </FlexLayout>
+      <TextBlock class="control-copy" text="{{ PlatformStatus }}" width="100%" />
+    </LinearLayout>
+  </FlexLayout>
+</LinearLayout>

@@ -15,6 +15,11 @@ public sealed class DamageRegionBuilder {
 
     public bool IsFull => _isFull;
 
+    public void Clear() {
+        _isFull = false;
+        _rects.Clear();
+    }
+
     public void MarkFull() {
         _isFull = true;
         _rects.Clear();

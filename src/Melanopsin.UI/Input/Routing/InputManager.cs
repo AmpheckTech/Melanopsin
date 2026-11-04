@@ -107,12 +107,26 @@ public sealed class InputManager {
             dispatched |= Dispatch(input, target, out preventDefaultFocus);
         }
 
+        var completedSecondary = input.Phase == PointerPhase.Up &&
+            input.IsSecondaryButton &&
+            capture?.Buttons.Contains(MouseButtonKind.Right) == true &&
+            IsInside(target, input);
+        var completedMiddle = input.Phase == PointerPhase.Up &&
+            input.IsMiddleButton &&
+            capture?.Buttons.Contains(MouseButtonKind.Middle) == true &&
+            IsInside(target, input);
+
         if (input.Phase == PointerPhase.Up) {
             if (input.Device == InputDeviceKind.Mouse &&
                 capture is not null &&
                 input.Button != MouseButtonKind.None) {
                 capture.Buttons.Remove(input.Button);
                 if (capture.Buttons.Count != 0) {
+                    DispatchButtonEvent(
+                        input,
+                        target,
+                        completedSecondary,
+                        completedMiddle);
                     return dispatched;
                 }
             }
@@ -125,6 +139,12 @@ public sealed class InputManager {
 
             _captures.Remove(key);
         }
+
+        DispatchButtonEvent(
+            input,
+            target,
+            completedSecondary,
+            completedMiddle);
 
         return dispatched;
     }
@@ -220,5 +240,37 @@ public sealed class InputManager {
         }
 
         return dispatched;
+    }
+
+    private static void DispatchButtonEvent(
+        PointerInputEvent input,
+        WindowHitTarget target,
+        bool contextRequested,
+        bool middleClicked) {
+        if (contextRequested) {
+            var request = new ContextMenuRequest(target.Node, input);
+            for (var index = target.Route.Count - 1; index >= 0; index--) {
+                request.CurrentTarget = target.Route[index];
+                request.CurrentTarget.RaiseContextRequested(request);
+                if (request.Handled) {
+                    break;
+                }
+            }
+        }
+
+        if (middleClicked) {
+            var request = new MiddleClickRequest(target.Node, input);
+            for (var index = target.Route.Count - 1; index >= 0; index--) {
+                request.CurrentTarget = target.Route[index];
+                request.CurrentTarget.RaiseMiddleClicked(request);
+                if (request.Handled) {
+                    break;
+                }
+            }
+        }
+    }
+
+    private static bool IsInside(WindowHitTarget target, PointerInputEvent input) {
+        return new RoutedInputEvent(input, target).IsInsideTarget;
     }
 }

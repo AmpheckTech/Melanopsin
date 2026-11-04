@@ -81,6 +81,14 @@ public sealed class Tween<T> {
         Value = Sample(Timeline.EasedProgress);
     }
 
+    /// <summary>
+    /// Moves directly to a normalized position without playing the timeline.
+    /// </summary>
+    public void Seek(float progress) {
+        Timeline.Seek(progress);
+        Value = Sample(Timeline.EasedProgress);
+    }
+
     public void Retarget(T to) {
         From = Value;
         To = to;

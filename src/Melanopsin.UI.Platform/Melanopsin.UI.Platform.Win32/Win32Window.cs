@@ -13,7 +13,7 @@ internal sealed partial class Win32Window : IDisposable {
     private IntPtr _previousBitmap;
     private IntPtr _bitmapBits;
     private IntPtr _cursorHandle;
-    private IGpuFrameSurface? _gpuSurface;
+    private INativePresentationSurface? _nativeSurface;
     private bool _disposed;
 
     public Win32Window(IntPtr handle, WindowDescriptor windowDescriptor) {
@@ -24,6 +24,8 @@ internal sealed partial class Win32Window : IDisposable {
         Handle = handle;
         Id = windowDescriptor.Id;
         Size = windowDescriptor.Size;
+        OwnerId = windowDescriptor.OwnerId;
+        IsModal = windowDescriptor.IsModal;
         _cursorHandle = LoadCursor(Cursor);
         _deviceContext = Win32Native.GetDC(Handle);
         _memoryDeviceContext = Win32Native.CreateCompatibleDC(_deviceContext);
@@ -40,6 +42,10 @@ internal sealed partial class Win32Window : IDisposable {
     public IntPtr Handle { get; }
 
     public WindowId Id { get; }
+
+    public WindowId? OwnerId { get; }
+
+    public bool IsModal { get; }
 
     public PixelSize Size { get; private set; }
 
@@ -97,26 +103,38 @@ internal sealed partial class Win32Window : IDisposable {
         }
 
         _disposed = true;
-        if (_deviceContext != IntPtr.Zero) {
-            Win32Native.ReleaseDC(Handle, _deviceContext);
+        Exception? failure = null;
+        try {
+            ReleaseNativeSurface();
+        } catch (Exception exception) {
+            failure = exception;
         }
 
-        if (_memoryDeviceContext != IntPtr.Zero) {
-            _ = Win32Native.SelectObject(_memoryDeviceContext, _previousBitmap);
+        try {
+            if (_deviceContext != IntPtr.Zero) {
+                Win32Native.ReleaseDC(Handle, _deviceContext);
+            }
+
+            if (_memoryDeviceContext != IntPtr.Zero) {
+                _ = Win32Native.SelectObject(_memoryDeviceContext, _previousBitmap);
+            }
+
+            if (_bitmap != IntPtr.Zero) {
+                _ = Win32Native.DeleteObject(_bitmap);
+                _bitmap = IntPtr.Zero;
+            }
+
+            if (_memoryDeviceContext != IntPtr.Zero) {
+                _ = Win32Native.DeleteDC(_memoryDeviceContext);
+            }
+        } finally {
+            _capturedButtons.Clear();
+            _bitmapBits = IntPtr.Zero;
         }
 
-        if (_bitmap != IntPtr.Zero) {
-            _ = Win32Native.DeleteObject(_bitmap);
-            _bitmap = IntPtr.Zero;
+        if (failure is not null) {
+            throw failure;
         }
-
-        if (_memoryDeviceContext != IntPtr.Zero) {
-            _ = Win32Native.DeleteDC(_memoryDeviceContext);
-        }
-
-        _capturedButtons.Clear();
-        _bitmapBits = IntPtr.Zero;
-        _gpuSurface = null;
     }
 
     private static IntPtr LoadCursor(CursorKind cursor) {

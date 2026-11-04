@@ -7,7 +7,8 @@ using Melanopsin.UI.Platform.Win32.Windowing;
 namespace Melanopsin.UI.Platform.Win32;
 
 /// <summary>
-/// Opens native Win32 windows and presents backend-neutral BGRA frames with GDI.
+/// Opens native Win32 windows and presents backend-neutral surfaces directly or
+/// through the GDI BGRA fallback.
 /// </summary>
 public sealed class Win32PlatformHost : IPlatformWindowHost {
     private static int _presenterSequence;
@@ -15,6 +16,8 @@ public sealed class Win32PlatformHost : IPlatformWindowHost {
     private readonly Win32WindowRegistry _windows = new();
     private readonly Win32WindowEventQueue _events = new();
     private readonly Win32Native.WindowProcedure _windowProcedure;
+    private readonly Win32Clipboard _clipboard = new();
+    private readonly Win32Notifications _notifications;
     private readonly IntPtr _instance;
     private readonly string _className;
     private readonly bool _timerPeriodSet;
@@ -48,6 +51,7 @@ public sealed class Win32PlatformHost : IPlatformWindowHost {
             _windows,
             _events,
             UpdateDisplayScale).WindowProcedure;
+        _notifications = new Win32Notifications(_windows);
         RegisterWindowClass();
     }
 
@@ -55,21 +59,40 @@ public sealed class Win32PlatformHost : IPlatformWindowHost {
 
     public float DisplayScale => Volatile.Read(ref _displayScale);
 
+    public IPlatformClipboard Clipboard => _clipboard;
+
+    public IPlatformNotifications Notifications => _notifications;
+
     /// <summary>
     /// The failure observed during the most recent disposal. Disposal records
     /// this value instead of throwing so every native resource is released.
     /// </summary>
     public Exception? LastCleanupFailure => Volatile.Read(ref _cleanupFailure);
 
-    public void Present(WindowDescriptor windowDescriptor, RenderFrame frame) {
+    public PresentResult Present(
+        WindowDescriptor windowDescriptor,
+        RenderFrameLease frame) {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        ArgumentNullException.ThrowIfNull(frame);
+        if (!frame.IsValid) {
+            return PresentResult.Rejected;
+        }
+
+        var surface = frame.Surface;
+        var canPresentNative = frame.VisualAccessibility == default &&
+            surface is INativePresentationSurface;
+        var canPresentCpu =
+            surface is ICpuReadableSurface &&
+            surface.PixelFormat == RenderPixelFormat.Bgra8888Premultiplied;
+        if (!canPresentNative && !canPresentCpu) {
+            return PresentResult.Rejected;
+        }
 
         var created = false;
         if (!_windows.TryGet(windowDescriptor.Id, out var window)) {
             window = CreateWindow(windowDescriptor);
             _windows.Add(window);
             created = true;
+            UpdateWindowRelationships(window);
         }
 
         if (created) {
@@ -87,6 +110,8 @@ public sealed class Win32PlatformHost : IPlatformWindowHost {
         }
 
         window.Present(frame);
+        frame.Release();
+        return PresentResult.Accepted;
     }
 
     public void PollEvents() {
@@ -129,6 +154,9 @@ public sealed class Win32PlatformHost : IPlatformWindowHost {
 
         window.Dispose();
         Win32Native.DestroyWindow(window.Handle);
+        foreach (var candidate in _windows.Windows) {
+            SynchronizeOwnerEnabled(candidate.Id);
+        }
     }
 
     public void SetCursor(WindowId windowId, CursorKind cursor) {
@@ -150,6 +178,7 @@ public sealed class Win32PlatformHost : IPlatformWindowHost {
 
         _disposed = true;
         List<Exception>? failures = null;
+        CaptureCleanupFailure(ref failures, _notifications.Dispose);
         CaptureCleanupFailure(ref failures, _windows.CloseAll);
         CaptureCleanupFailure(ref failures, _events.Clear);
         if (_timerPeriodSet) {
@@ -214,6 +243,10 @@ public sealed class Win32PlatformHost : IPlatformWindowHost {
         var outerWidth = rectangle.Right - rectangle.Left;
         var outerHeight = rectangle.Bottom - rectangle.Top;
         var (x, y) = FindWindowPosition(outerWidth, outerHeight);
+        var ownerHandle = windowDescriptor.OwnerId is { } ownerId &&
+            _windows.TryGet(ownerId, out var owner)
+                ? owner.Handle
+                : IntPtr.Zero;
         var handle = Win32Native.CreateWindowExW(
             extendedStyle: 0,
             _className,
@@ -223,7 +256,7 @@ public sealed class Win32PlatformHost : IPlatformWindowHost {
             y,
             outerWidth,
             outerHeight,
-            parent: IntPtr.Zero,
+            parent: ownerHandle,
             menu: IntPtr.Zero,
             _instance,
             parameter: IntPtr.Zero);
@@ -234,6 +267,87 @@ public sealed class Win32PlatformHost : IPlatformWindowHost {
         var window = new Win32Window(handle, windowDescriptor);
         _ = window.UpdatePosition(x, y);
         return window;
+    }
+
+    private void UpdateWindowRelationships(Win32Window window) {
+        if (window.OwnerId is { } ownerId &&
+            _windows.TryGet(ownerId, out var owner)) {
+            SetWindowOwner(window.Handle, owner.Handle);
+        }
+
+        foreach (var child in _windows.Windows) {
+            if (!ReferenceEquals(child, window) && child.OwnerId == window.Id) {
+                SetWindowOwner(child.Handle, window.Handle);
+            }
+        }
+
+        foreach (var candidate in _windows.Windows) {
+            SynchronizeOwnerEnabled(candidate.Id);
+        }
+    }
+
+    private void SynchronizeOwnerEnabled(WindowId ownerId) {
+        if (!_windows.TryGet(ownerId, out var owner)) {
+            return;
+        }
+
+        _ = Win32Native.EnableWindow(owner.Handle, !HasModalDescendant(ownerId));
+    }
+
+    private bool HasModalDescendant(WindowId windowId) {
+        var pending = new Stack<WindowId>();
+        pending.Push(windowId);
+        while (pending.TryPop(out var ownerId)) {
+            foreach (var child in _windows.Windows) {
+                if (child.OwnerId != ownerId) {
+                    continue;
+                }
+
+                if (child.IsModal) {
+                    return true;
+                }
+
+                pending.Push(child.Id);
+            }
+        }
+
+        return false;
+    }
+
+    private static void SetWindowOwner(IntPtr window, IntPtr owner) {
+        Marshal.SetLastPInvokeError(0);
+        if (IntPtr.Size == sizeof(long)) {
+            _ = Win32Native.SetWindowLongPtrW(
+                window,
+                Win32Native.GwlpHwndParent,
+                owner);
+        } else {
+            _ = Win32Native.SetWindowLongW(
+                window,
+                Win32Native.GwlpHwndParent,
+                owner.ToInt32());
+        }
+
+        var error = Marshal.GetLastPInvokeError();
+        if (error != 0) {
+            throw new Win32Exception(error, "SetWindowLong failed.");
+        }
+
+        if (!Win32Native.SetWindowPos(
+                window,
+                IntPtr.Zero,
+                0,
+                0,
+                0,
+                0,
+                Win32Native.SwpNoMove |
+                Win32Native.SwpNoSize |
+                Win32Native.SwpNoActivate |
+                Win32Native.SwpFrameChanged)) {
+            throw new Win32Exception(
+                Marshal.GetLastWin32Error(),
+                "SetWindowPos failed.");
+        }
     }
 
     private (int X, int Y) FindWindowPosition(

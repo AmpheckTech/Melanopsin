@@ -9,7 +9,12 @@ public sealed partial class ComboBox {
             return;
         }
 
-        var phase = inputEvent.Input.Phase;
+        var input = inputEvent.Input;
+        if (!input.IsPrimaryButton) {
+            return;
+        }
+
+        var phase = input.Phase;
         if (phase == PointerPhase.Down) {
             SetState(UiStateNames.Pressed, true);
         } else if (phase == PointerPhase.Up) {

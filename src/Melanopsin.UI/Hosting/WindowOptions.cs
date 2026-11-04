@@ -8,4 +8,16 @@ public sealed class WindowOptions {
     /// physical pixels using the current display scale.
     /// </summary>
     public required PixelSize Size { get; init; }
+
+    /// <summary>
+    /// The window that owns this window. Owned windows stay above their owner
+    /// and close with the complete owner tree.
+    /// </summary>
+    public WindowId? OwnerId { get; init; }
+
+    /// <summary>
+    /// Prevents interaction with the owner hierarchy while this window is
+    /// open. A modal window must have an owner.
+    /// </summary>
+    public bool IsModal { get; init; }
 }

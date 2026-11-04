@@ -77,6 +77,10 @@ internal sealed class ComboBoxPopup :
             return;
         }
 
+        if (!inputEvent.Input.IsPrimaryButton) {
+            return;
+        }
+
         var row = HitRow(inputEvent.LayoutY);
         if (phase == PointerPhase.Down) {
             _pressedRow = row;

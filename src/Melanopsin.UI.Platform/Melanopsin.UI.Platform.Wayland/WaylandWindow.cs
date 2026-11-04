@@ -15,21 +15,22 @@ internal sealed partial class WaylandWindow : IDisposable {
     private bool _hasSurfaceContents;
 
     public WaylandWindow(
-        WindowId id,
+        WindowDescriptor descriptor,
         WaylandConnection connection,
-        string title,
         PixelSize initialPhysicalSize,
         PixelSize initialLogicalSize,
         float displayScale,
         Action<WaylandWindow, bool, bool, bool> onConfigured,
         Action<WaylandWindow> onCloseRequested,
         Action onBufferReleased) {
-        Id = id;
+        Id = descriptor.Id;
+        OwnerId = descriptor.OwnerId;
+        IsModal = descriptor.IsModal;
         _queue = connection.Queue;
         _onConfigured = onConfigured;
         _onCloseRequested = onCloseRequested;
         _onBufferReleased = onBufferReleased;
-        Title = title;
+        Title = descriptor.Title;
         LogicalSize = initialLogicalSize;
         Size = initialPhysicalSize;
         DisplayScale = NormalizeScale(displayScale);
@@ -65,7 +66,13 @@ internal sealed partial class WaylandWindow : IDisposable {
 
     public WindowId Id { get; }
 
-    public IGpuFrameSurface? GpuSurface { get; set; }
+    public WindowId? OwnerId { get; }
+
+    public bool IsModal { get; }
+
+    public WaylandPendingFrame PendingFrame { get; } = new();
+
+    public INativePresentationSurface? NativePresentationSurface { get; set; }
 
     public IntPtr Handle => _surface.Handle;
 

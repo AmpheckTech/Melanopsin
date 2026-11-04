@@ -64,7 +64,12 @@ public sealed class Button :
             return;
         }
 
-        var phase = inputEvent.Input.Phase;
+        var input = inputEvent.Input;
+        if (!input.IsPrimaryButton) {
+            return;
+        }
+
+        var phase = input.Phase;
         if (phase == PointerPhase.Down) {
             IsPressed = true;
         } else if (phase == PointerPhase.Up) {

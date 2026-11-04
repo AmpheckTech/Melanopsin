@@ -35,7 +35,71 @@ public sealed class Application : IDisposable {
 
     public UiRuntime Runtime => _host.Runtime;
 
+    public IPlatformClipboard? Clipboard => _platform.Clipboard;
+
+    public IPlatformNotifications? Notifications => _platform.Notifications;
+
     public static Application Default(Action<StyleSheet>? configureStyles = null) {
+        var primaryFont = SystemFonts.LoadPrimary();
+        var fallbackFonts = SystemFonts.LoadFallbacks()
+            .Select(static font => FontFace.Load(font.Path, font.FaceIndex))
+            .ToArray();
+        return Create(
+            primaryFont,
+            fallbackFonts,
+            configureStyles,
+            SkiaRasterCacheOptions.Default,
+            activeFrameRate: 60,
+            idleFrameRate: 15);
+    }
+
+    /// <summary>
+    /// Creates an application preset for memory-constrained devices. Fonts are
+    /// limited to the supplied primary file and explicitly configured fallback
+    /// files; host fallback fonts are never discovered implicitly.
+    /// </summary>
+    public static Application Embedded(
+        string primaryFontPath,
+        Action<StyleSheet>? configureStyles = null,
+        Action<EmbeddedOptions>? configure = null) {
+        ArgumentException.ThrowIfNullOrWhiteSpace(primaryFontPath);
+        return Embedded(new FontAsset(primaryFontPath), configureStyles, configure);
+    }
+
+    public static Application Embedded(
+        FontAsset primaryFont,
+        Action<StyleSheet>? configureStyles = null,
+        Action<EmbeddedOptions>? configure = null) {
+        var options = new EmbeddedOptions();
+        configure?.Invoke(options);
+        Validate(options);
+
+        var primaryFace = FontFace.Load(primaryFont.Path, primaryFont.FaceIndex);
+        var fallbackFonts = options.FallbackFonts
+            .Select(static font => FontFace.Load(font.Path, font.FaceIndex))
+            .ToArray();
+        var rasterCacheOptions = new SkiaRasterCacheOptions(
+            byteLimit: options.RasterCacheByteLimit,
+            entryLimit: options.RasterCacheEntryLimit,
+            entryByteLimit: Math.Min(
+                options.RasterCacheByteLimit,
+                SkiaRasterCacheOptions.Default.EntryByteLimit));
+        return Create(
+            primaryFace,
+            fallbackFonts,
+            configureStyles,
+            rasterCacheOptions,
+            options.ActiveFrameRate,
+            options.IdleFrameRate);
+    }
+
+    private static Application Create(
+        FontFace primaryFont,
+        IReadOnlyList<FontFace> fallbackFonts,
+        Action<StyleSheet>? configureStyles,
+        SkiaRasterCacheOptions rasterCacheOptions,
+        int activeFrameRate,
+        int idleFrameRate) {
         IPlatformWindowHost? platform = null;
         HarfBuzzTextShaper? textShaper = null;
         WindowManager? windows = null;
@@ -45,10 +109,9 @@ public sealed class Application : IDisposable {
             platform = OperatingSystem.IsWindows()
                 ? new Win32PlatformHost()
                 : new WaylandPlatformHost();
-            var primaryFont = SystemFonts.LoadPrimary();
             var fonts = new FontCollection(primaryFont);
-            foreach (var fallback in SystemFonts.LoadFallbacks()) {
-                fonts.AddFallback(FontFace.Load(fallback.Path, fallback.FaceIndex));
+            foreach (var fallbackFont in fallbackFonts) {
+                fonts.AddFallback(fallbackFont);
             }
 
             textShaper = new HarfBuzzTextShaper(fonts);
@@ -59,7 +122,7 @@ public sealed class Application : IDisposable {
             var styleSheet = new StyleSheet();
             configureStyles?.Invoke(styleSheet);
             windows = new WindowManager(
-                new SkiaRenderBackend(primaryFont),
+                new SkiaRenderBackend(primaryFont, rasterCacheOptions),
                 platform,
                 new StyleEngine(styleSheet, metrics),
                 platformHost: platform,
@@ -76,6 +139,8 @@ public sealed class Application : IDisposable {
                 new InputManager(windows),
                 new FocusManager(windows),
                 runtime: runtime);
+            host.ActiveFrameRate = activeFrameRate;
+            host.IdleFrameRate = idleFrameRate;
             return new Application(platform, textShaper, windows, host, styleSheet);
         } catch {
             if (host is not null) {
@@ -88,6 +153,32 @@ public sealed class Application : IDisposable {
             textShaper?.Dispose();
             platform?.Dispose();
             throw;
+        }
+    }
+
+    private static void Validate(EmbeddedOptions options) {
+        if (options.ActiveFrameRate is < 1 or > 240) {
+            throw new ArgumentOutOfRangeException(
+                nameof(options.ActiveFrameRate),
+                "The active frame rate must be between 1 and 240.");
+        }
+
+        if (options.IdleFrameRate is < 1 or > 240) {
+            throw new ArgumentOutOfRangeException(
+                nameof(options.IdleFrameRate),
+                "The idle frame rate must be between 1 and 240.");
+        }
+
+        if (options.RasterCacheByteLimit <= 0) {
+            throw new ArgumentOutOfRangeException(
+                nameof(options.RasterCacheByteLimit),
+                "The raster cache limit must be positive.");
+        }
+
+        if (options.RasterCacheEntryLimit <= 0) {
+            throw new ArgumentOutOfRangeException(
+                nameof(options.RasterCacheEntryLimit),
+                "The raster cache entry limit must be positive.");
         }
     }
 

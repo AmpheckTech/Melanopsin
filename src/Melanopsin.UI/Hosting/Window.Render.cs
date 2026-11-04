@@ -5,8 +5,16 @@ using Melanopsin.UI.Rendering;
 namespace Melanopsin.UI.Hosting;
 
 public sealed partial class Window {
-    internal RenderFrame Render(RenderOptions options) {
+    internal bool TryRender(
+        RenderOptions options,
+        out RenderFrameLease frame) {
         ThrowIfDisposed();
+        DrainRetiredTargets();
+        if (!_target.IsFrameAvailable) {
+            frame = default;
+            return false;
+        }
+
         options = options with {
             ScaleFactor = DisplayScale,
         };
@@ -64,7 +72,6 @@ public sealed partial class Window {
             damage = DamageRegion.Full(Size);
         }
 
-        var damageArea = damage.Rects.Sum(static rect => rect.Area);
         var composeStart = Stopwatch.GetTimestamp();
         var scene = _renderContext.Composer.Compose(
             layout,
@@ -75,33 +82,57 @@ public sealed partial class Window {
         var composeMilliseconds =
             Stopwatch.GetElapsedTime(composeStart).TotalMilliseconds;
         var renderStart = Stopwatch.GetTimestamp();
-        var frame = _target.Render(scene);
+        if (!_target.TryRender(scene, out frame)) {
+            return false;
+        }
+
         var renderMilliseconds =
             Stopwatch.GetElapsedTime(renderStart).TotalMilliseconds;
 
-        if (frame.Descriptor.Size != Size) {
+        if (frame.Surface.Size != Size) {
+            frame.Release();
             throw new InvalidOperationException(
                 "The rendering backend returned a frame for the wrong size.");
         }
 
-        _pendingDamage = new DamageRegionBuilder(Size);
+        _stagedRenderOptions = options;
+        _stagedStatistics = frame.Statistics;
+        _stagedDamage = damage;
+        _stagedLayoutMilliseconds = layoutMilliseconds;
+        _stagedComposeMilliseconds = composeMilliseconds;
+        _stagedRenderMilliseconds = renderMilliseconds;
+        _hasStagedFrame = true;
+        return true;
+    }
+
+    internal void CommitStagedFrame() {
+        if (!_hasStagedFrame || _stagedDamage is not { } damage) {
+            throw new InvalidOperationException(
+                "There is no rendered frame to commit.");
+        }
+
+        _hasStagedFrame = false;
+        _pendingDamage.Clear();
         _invalidatePaintCache = false;
         _forceFullLayoutDamage = false;
-        _lastRenderOptions = options;
+        _lastRenderOptions = _stagedRenderOptions;
         _hasRendered = true;
-        LastRenderStatistics = frame.Statistics;
+        LastRenderStatistics = _stagedStatistics;
         _frameNumber++;
+        var layout = _lastLayout ?? throw new InvalidOperationException(
+            "The layout pass completed without producing a layout snapshot.");
+        var damageArea = damage.Rects.Sum(static rect => rect.Area);
         _devToolsSnapshot = new DevToolsSnapshot(
             _frameNumber,
             LayoutVersion,
-            frame.Statistics.CommandCount,
+            _stagedStatistics.CommandCount,
             damage.Rects.Count,
             damageArea,
-            frame.Statistics.ReusedPaintBoundaries,
-            frame.Statistics.RepaintedPaintBoundaries,
-            frame.Statistics.RasterCacheHits,
-            frame.Statistics.RasterCacheMisses,
-            frame.Statistics.RasterCacheBytes,
+            _stagedStatistics.ReusedPaintBoundaries,
+            _stagedStatistics.RepaintedPaintBoundaries,
+            _stagedStatistics.RasterCacheHits,
+            _stagedStatistics.RasterCacheMisses,
+            _stagedStatistics.RasterCacheBytes,
             layout.Statistics.InvalidationScope,
             layout.Statistics.InvalidationPathNodeCount,
             layout.Statistics.RelayoutBoundaryHits,
@@ -114,12 +145,17 @@ public sealed partial class Window {
             layout.Statistics.PersistentMeasureHits,
             layout.Nodes.Count,
             layout.HitRegions.Count,
-            layoutMilliseconds,
-            composeMilliseconds,
-            renderMilliseconds,
-            options.VisualAccessibility);
+            _stagedLayoutMilliseconds,
+            _stagedComposeMilliseconds,
+            _stagedRenderMilliseconds,
+            _stagedRenderOptions.VisualAccessibility);
+        _stagedDamage = null;
         DiagnosticsChanged?.Invoke(this, _devToolsSnapshot.Value);
-        return frame;
+    }
+
+    internal void DiscardStagedFrame() {
+        _hasStagedFrame = false;
+        _stagedDamage = null;
     }
 
     internal bool AdvanceAnimations(float elapsedSeconds) {

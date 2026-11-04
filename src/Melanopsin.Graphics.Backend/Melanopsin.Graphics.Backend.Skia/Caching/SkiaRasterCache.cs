@@ -3,15 +3,18 @@ using System.Diagnostics.CodeAnalysis;
 namespace Melanopsin.Graphics.Backend.Skia;
 
 internal sealed class SkiaRasterCache : IDisposable {
-    private const long MaxBytes = 32L * 1024 * 1024;
-    private const int MaxEntries = 128;
     private readonly Dictionary<RenderLayer, RasterCacheEntry> _entries =
         new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<RenderLayer, long> _candidates =
         new(ReferenceEqualityComparer.Instance);
+    private readonly SkiaRasterCacheOptions _options;
     private long _tick;
     private long _bytes;
     private bool _disposed;
+
+    public SkiaRasterCache(SkiaRasterCacheOptions options) {
+        _options = options;
+    }
 
     public int Hits { get; private set; }
 
@@ -60,7 +63,8 @@ internal sealed class SkiaRasterCache : IDisposable {
         ObjectDisposedException.ThrowIf(_disposed, this);
         RemoveStaleCandidates();
         Exception? failure = null;
-        while (_bytes > MaxBytes || _entries.Count > MaxEntries) {
+        while (_bytes > _options.ByteLimit ||
+               _entries.Count > _options.EntryLimit) {
             if (!TryEvictOldest(ref failure)) {
                 break;
             }

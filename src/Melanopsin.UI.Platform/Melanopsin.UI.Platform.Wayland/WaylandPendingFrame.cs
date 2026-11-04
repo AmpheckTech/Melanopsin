@@ -1,37 +1,71 @@
+using Melanopsin.Graphics.Rendering;
+
 namespace Melanopsin.UI.Platform.Wayland;
 
 internal sealed class WaylandPendingFrame {
-    public WaylandPendingFrame(
-        WindowDescriptor descriptor,
-        RenderFrame frame,
+    private bool _isOccupied;
+
+    public RenderFrameLease Frame { get; private set; }
+
+    public int Width { get; private set; }
+
+    public int Height { get; private set; }
+
+    public int LogicalWidth { get; private set; }
+
+    public int LogicalHeight { get; private set; }
+
+    public float DisplayScale { get; private set; }
+
+    public bool IsOccupied => _isOccupied;
+
+    public bool IsLeaseValid => _isOccupied && Frame.IsValid;
+
+    public void Set(
+        RenderFrameLease frame,
         int logicalWidth,
         int logicalHeight,
         float displayScale) {
-        Descriptor = descriptor;
+        if (IsOccupied) {
+            throw new InvalidOperationException(
+                "The pending frame slot is already occupied.");
+        }
+
+        var surface = frame.Surface;
         Frame = frame;
-        Width = frame.Descriptor.Size.Width;
-        Height = frame.Descriptor.Size.Height;
-        Stride = frame.Stride;
+        _isOccupied = true;
+        Width = surface.Size.Width;
+        Height = surface.Size.Height;
         LogicalWidth = logicalWidth;
         LogicalHeight = logicalHeight;
         DisplayScale = displayScale;
     }
 
-    public WindowDescriptor Descriptor { get; }
+    public void Clear() {
+        var frame = DetachWithoutRelease();
+        if (frame.IsValid) {
+            frame.Release();
+        }
+    }
 
-    public RenderFrame Frame { get; }
+    public RenderFrameLease DetachWithoutRelease() {
+        if (!_isOccupied) {
+            Reset();
+            return default;
+        }
 
-    public int Width { get; }
+        var frame = Frame;
+        Reset();
+        return frame;
+    }
 
-    public int Height { get; }
-
-    public int Stride { get; }
-
-    public int LogicalWidth { get; }
-
-    public int LogicalHeight { get; }
-
-    public float DisplayScale { get; }
-
-    public ReadOnlyMemory<byte> Pixels => Frame.Pixels;
+    private void Reset() {
+        _isOccupied = false;
+        Frame = default;
+        Width = 0;
+        Height = 0;
+        LogicalWidth = 0;
+        LogicalHeight = 0;
+        DisplayScale = 0;
+    }
 }

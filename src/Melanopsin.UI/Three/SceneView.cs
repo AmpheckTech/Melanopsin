@@ -99,6 +99,10 @@ public sealed class SceneView : Control,
         }
 
         var input = inputEvent.Input;
+        if (!input.IsPrimaryButton) {
+            return;
+        }
+
         switch (input.Phase) {
             case PointerPhase.Down:
                 _isOrbiting = true;

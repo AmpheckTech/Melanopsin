@@ -9,12 +9,14 @@ internal sealed partial class WaylandWindow {
         }
 
         _disposed = true;
+        PendingFrame.Clear();
+        if (NativePresentationSurface is { } nativeSurface) {
+            nativeSurface.ReleaseNativeTarget(_surface.Handle);
+            NativePresentationSurface = null;
+        }
+
         _frameCallback.Dispose();
         _bufferPool.Dispose();
-        if (GpuSurface is { } gpuSurface) {
-            gpuSurface.ReleasePresentSurface(_surface.Handle);
-            GpuSurface = null;
-        }
 
         if (_viewport is not null) {
             if (!_viewport.IsDisposed) {

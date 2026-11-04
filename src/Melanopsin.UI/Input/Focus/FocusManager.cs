@@ -69,7 +69,7 @@ public sealed partial class FocusManager {
     }
 
     public bool HandlePointer(PointerInputEvent input) {
-        if (input.Phase != PointerPhase.Down) {
+        if (input.Phase != PointerPhase.Down || !input.IsPrimaryButton) {
             return false;
         }
 

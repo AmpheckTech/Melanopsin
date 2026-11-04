@@ -5,23 +5,29 @@ using Melanopsin.UI.Rendering;
 namespace Melanopsin.UI.Hosting;
 
 public sealed partial class WindowManager {
-    public IReadOnlyList<RenderFrame> RenderAll(RenderOptions? options = null) {
+    public int RenderAll(RenderOptions? options = null) {
         ThrowIfDisposed();
         return RenderWindows(options ?? RenderOptions.Default, dirtyOnly: false);
     }
 
-    public IReadOnlyList<RenderFrame> RenderDirty(RenderOptions? options = null) {
+    public int RenderDirty(RenderOptions? options = null) {
         ThrowIfDisposed();
         return RenderWindows(options ?? RenderOptions.Default, dirtyOnly: true);
     }
 
-    private IReadOnlyList<RenderFrame> RenderWindows(
+    private int RenderWindows(
         RenderOptions options,
         bool dirtyOnly) {
-        var frames = new List<RenderFrame>(_windows.Count);
+        if (_presenter is null) {
+            throw new InvalidOperationException(
+                "Rendering requires a frame presenter.");
+        }
+
+        var presentedFrames = 0;
         var layoutChanged = false;
 
         foreach (var window in _windows) {
+            window.DrainRetiredTargets();
             if (dirtyOnly && !window.IsDirty) {
                 continue;
             }
@@ -41,13 +47,23 @@ public sealed partial class WindowManager {
             var windowOptions = window.ShowDebugBounds
                 ? options with { DrawDebugBounds = true }
                 : options;
-            var frame = window.Render(windowOptions);
+            if (!window.TryRender(windowOptions, out var frame)) {
+                continue;
+            }
 
             var presentStarted = Stopwatch.GetTimestamp();
-            _presenter?.Present(window.Descriptor, frame);
+            PresentResult result;
+            try {
+                result = _presenter.Present(window.Descriptor, frame);
+            } catch {
+                frame.Release();
+                window.DiscardStagedFrame();
+                throw;
+            }
+
             if (TraceFrameTiming) {
                 Console.Error.WriteLine(
-                    $"[ui] frame {window.Id} {frame.Descriptor.Size.Width}x{frame.Descriptor.Size.Height} " +
+                    $"[ui] frame {window.Id} {window.Size.Width}x{window.Size.Height} " +
                     $"layout={window.LastDiagnostics?.LayoutMilliseconds ?? 0:0.00}ms " +
                     $"compose={window.LastDiagnostics?.ComposeMilliseconds ?? 0:0.00}ms " +
                     $"raster={window.LastDiagnostics?.RenderMilliseconds ?? 0:0.00}ms " +
@@ -55,17 +71,24 @@ public sealed partial class WindowManager {
                     $"present-call={Stopwatch.GetElapsedTime(presentStarted).TotalMilliseconds:0.00}ms");
             }
 
-            TotalFramesPresented++;
+            if (result != PresentResult.Accepted) {
+                frame.Release();
+                window.DiscardStagedFrame();
+                continue;
+            }
+
+            window.CommitStagedFrame();
             window.MarkClean();
+            TotalFramesPresented++;
+            presentedFrames++;
             layoutChanged |= window.LayoutVersion != layoutRevision;
-            frames.Add(frame);
         }
 
         if (layoutChanged) {
             PruneStyleState();
         }
 
-        return frames;
+        return presentedFrames;
     }
 
     private IRenderTarget ReplaceTarget(RenderTargetDescriptor descriptor) {
