@@ -7,7 +7,8 @@ using Melanopsin.UI.Platform.Win32;
 
 namespace Melanopsin.UI.Desktop;
 
-public sealed class Application : IDisposable {
+public sealed class Application : IDisposable
+{
     private readonly IPlatformWindowHost _platform;
     private readonly HarfBuzzTextShaper _textShaper;
     private readonly WindowManager _windows;
@@ -21,7 +22,8 @@ public sealed class Application : IDisposable {
         HarfBuzzTextShaper textShaper,
         WindowManager windows,
         global::Melanopsin.UI.Hosting.Application host,
-        StyleSheet styleSheet) {
+        StyleSheet styleSheet)
+    {
         _platform = platform;
         _textShaper = textShaper;
         _windows = windows;
@@ -39,7 +41,15 @@ public sealed class Application : IDisposable {
 
     public IPlatformNotifications? Notifications => _platform.Notifications;
 
-    public static Application Default(Action<StyleSheet>? configureStyles = null) {
+    public static Application Default(
+        Action<StyleSheet>? configureStyles = null) {
+        return Default(new ApplicationOptions {
+            ConfigureStyles = configureStyles,
+        });
+    }
+
+    public static Application Default(ApplicationOptions options) {
+        ArgumentNullException.ThrowIfNull(options);
         var primaryFont = SystemFonts.LoadPrimary();
         var fallbackFonts = SystemFonts.LoadFallbacks()
             .Select(static font => FontFace.Load(font.Path, font.FaceIndex))
@@ -47,10 +57,13 @@ public sealed class Application : IDisposable {
         return Create(
             primaryFont,
             fallbackFonts,
-            configureStyles,
+            options.ConfigureStyles,
+            options.BackendFactory,
             SkiaRasterCacheOptions.Default,
             activeFrameRate: 60,
-            idleFrameRate: 15);
+            idleFrameRate: 15,
+            options.ViewportWidth,
+            options.ViewportHeight);
     }
 
     /// <summary>
@@ -88,24 +101,32 @@ public sealed class Application : IDisposable {
             primaryFace,
             fallbackFonts,
             configureStyles,
+            backendFactory: null,
             rasterCacheOptions,
             options.ActiveFrameRate,
-            options.IdleFrameRate);
+            options.IdleFrameRate,
+            viewportWidth: 1280,
+            viewportHeight: 720);
     }
 
     private static Application Create(
         FontFace primaryFont,
         IReadOnlyList<FontFace> fallbackFonts,
         Action<StyleSheet>? configureStyles,
+        Func<FontFace, IRenderBackend>? backendFactory,
         SkiaRasterCacheOptions rasterCacheOptions,
         int activeFrameRate,
-        int idleFrameRate) {
+        int idleFrameRate,
+        int viewportWidth,
+        int viewportHeight) {
         IPlatformWindowHost? platform = null;
         HarfBuzzTextShaper? textShaper = null;
         WindowManager? windows = null;
         UiRuntime? runtime = null;
         global::Melanopsin.UI.Hosting.Application? host = null;
-        try {
+        IRenderBackend? backend = null;
+        try
+        {
             platform = OperatingSystem.IsWindows()
                 ? new Win32PlatformHost()
                 : new WaylandPlatformHost();
@@ -117,12 +138,14 @@ public sealed class Application : IDisposable {
             textShaper = new HarfBuzzTextShaper(fonts);
             var metrics = new UiMetrics(
                 platform.DisplayScale,
-                viewportWidth: 820,
-                viewportHeight: 720);
+                viewportWidth,
+                viewportHeight);
             var styleSheet = new StyleSheet();
             configureStyles?.Invoke(styleSheet);
+            backend = backendFactory?.Invoke(primaryFont) ??
+                new SkiaRenderBackend(primaryFont, rasterCacheOptions);
             windows = new WindowManager(
-                new SkiaRenderBackend(primaryFont, rasterCacheOptions),
+                backend,
                 platform,
                 new StyleEngine(styleSheet, metrics),
                 platformHost: platform,
@@ -142,14 +165,27 @@ public sealed class Application : IDisposable {
             host.ActiveFrameRate = activeFrameRate;
             host.IdleFrameRate = idleFrameRate;
             return new Application(platform, textShaper, windows, host, styleSheet);
-        } catch {
-            if (host is not null) {
+        }
+        catch
+        {
+            if (host is not null)
+            {
                 host.Dispose();
-            } else {
+            }
+            else
+            {
                 runtime?.Dispose();
             }
 
-            windows?.Dispose();
+            if (windows is not null)
+            {
+                windows.Dispose();
+            }
+            else
+            {
+                backend?.Dispose();
+            }
+
             textShaper?.Dispose();
             platform?.Dispose();
             throw;
@@ -184,7 +220,8 @@ public sealed class Application : IDisposable {
 
     public Application EnableDevTools() {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        if (_devTools is null) {
+        if (_devTools is null)
+        {
             _devTools = new DevToolsController(_host);
             _host.PreviewKeyDown += OnPreviewKeyDown;
         }
@@ -192,40 +229,49 @@ public sealed class Application : IDisposable {
         return this;
     }
 
-    public void Run<TComponent>() where TComponent : Component, new() {
+    public void Run<TComponent>() where TComponent : Component, new()
+    {
         Run(new TComponent());
     }
 
     public void Run<TComponent>(WindowOptions options)
-        where TComponent : Component, new() {
+        where TComponent : Component, new()
+    {
         Run(new TComponent(), options);
     }
 
-    public void Run(Component root, WindowOptions? options = null) {
+    public void Run(Component root, WindowOptions? options = null)
+    {
         ArgumentNullException.ThrowIfNull(root);
         ObjectDisposedException.ThrowIf(_disposed, this);
-        if (_window is not null) {
+        if (_window is not null)
+        {
             throw new InvalidOperationException(
                 "This application already has a root window.");
         }
 
-        _window = _windows.CreateWindow(options ?? new WindowOptions {
+        _window = _windows.CreateWindow(options ?? new WindowOptions
+        {
             Title = root.GetType().Name,
-            Size = new PixelSize(820, 720),
+            Size = new PixelSize(1280, 720),
         });
-        _window.Root = new OverlayHost {
+        _window.Root = new OverlayHost
+        {
             Content = new ComponentHost(root, Runtime),
         };
         _host.Run();
     }
 
-    public void Dispose() {
-        if (_disposed) {
+    public void Dispose()
+    {
+        if (_disposed)
+        {
             return;
         }
 
         _disposed = true;
-        if (_devTools is not null) {
+        if (_devTools is not null)
+        {
             _host.PreviewKeyDown -= OnPreviewKeyDown;
             _devTools.Dispose();
         }
@@ -236,8 +282,10 @@ public sealed class Application : IDisposable {
         _platform.Dispose();
     }
 
-    private void OnPreviewKeyDown(KeyInputEvent input) {
-        if (input.Key == Key.F12) {
+    private void OnPreviewKeyDown(KeyInputEvent input)
+    {
+        if (input.Key == Key.F12)
+        {
             _devTools!.Toggle();
         }
     }

@@ -1,0 +1,5 @@
+# The markup compiler only masks embedded C# (@code / @for directives) in documents that
+# use LF line endings: MarkupCodeMask skips masking when it sees a CR, which leaves generic
+# type arguments such as IReadOnlyList<Step> visible to the XML reader and fails with MNP001.
+# Keep .mxml checked out with LF so Windows checkouts (core.autocrlf) build too.
+*.mxml text eol=lf

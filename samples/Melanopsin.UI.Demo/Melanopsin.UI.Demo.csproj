@@ -11,7 +11,18 @@
          short and the steadier resident set is worth it. -->
     <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
     <RootNamespace>Melanopsin.UI.Demo</RootNamespace>
+    <!-- The SDK that global.json resolves to (10.0.401) bundles Native AOT as
+         Microsoft.DotNet.ILCompiler 10.0.12, which NuGet audit reports as
+         GHSA-p3jp-9v83-76w9. Directory.Build.props promotes warnings to errors, so that
+         advisory fails `dotnet restore` for the whole solution. Pinning the patched
+         compiler here is enough: the ILCompiler package realigns KnownILCompilerPack to
+         the referenced version, so only the "explicit reference" warning needs muting. -->
+    <SuppressGenerateILCompilerExplicitPackageReferenceWarning>true</SuppressGenerateILCompilerExplicitPackageReferenceWarning>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="10.0.14" PrivateAssets="all" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../../src/Melanopsin.UI.Desktop/Melanopsin.UI.Desktop.csproj" />
@@ -24,6 +35,7 @@
       ReferenceOutputAssembly="false"
       GlobalPropertiesToRemove="PublishAot;SelfContained;RuntimeIdentifier" />
     <ProjectReference Include="../../src/Melanopsin.Graphics.Backend/Melanopsin.Graphics.Backend.Skia/Melanopsin.Graphics.Backend.Skia.csproj" />
+    <ProjectReference Include="..\..\src\Melanopsin.Graphics.Backend\Melanopsin.Graphics.Backend.RHI\Melanopsin.Graphics.Backend.RHI.csproj" />
     <ProjectReference Include="..\..\src\Melanopsin.UI.Platform\Melanopsin.UI.Platform.Win32\Melanopsin.UI.Platform.Win32.csproj" />
     <ProjectReference Include="..\..\src\Melanopsin.UI.Platform\Melanopsin.UI.Platform.Wayland\Melanopsin.UI.Platform.Wayland.csproj" />
   </ItemGroup>
