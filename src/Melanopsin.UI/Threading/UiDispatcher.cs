@@ -35,7 +35,7 @@ public sealed partial class UiDispatcher : IDisposable, IAsyncDisposable, IReact
 
     /// <summary>
     /// The failure observed while draining and finalizing the dispatcher, if any.
-    /// Synchronous <see cref="Dispose"/> does not throw; use <see cref="StopAsync"/>
+    /// Synchronous <see cref="Dispose"/> does not throw; use <see cref="StopAsync(CancellationToken)"/>
     /// or <see cref="DisposeAsync"/> when the failure must be observed.
     /// </summary>
     public Exception? ShutdownFailure {

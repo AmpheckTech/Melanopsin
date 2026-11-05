@@ -5,7 +5,7 @@ namespace Melanopsin.UI.Threading;
 public sealed partial class UiDispatcher {
     /// <summary>
     /// Requests shutdown and waits until the owner thread has drained and
-    /// finalized. Prefer <see cref="StopAsync"/> from asynchronous code.
+    /// finalized. Prefer <see cref="StopAsync(CancellationToken)"/> from asynchronous code.
     /// </summary>
     public void Stop() {
         var stopTask = StopAsync();

@@ -1,0 +1,8 @@
+{
+  "GeneratedPages": "Assembly,Namespaces,Types",
+  "GeneratedAccessModifiers": "Public,Protected",
+  "IncludeUndocumentedItems": false,
+  "FileNameFactory": "DirectoryName",
+  "Markdown.TableOfContentsModes": "Grouped,IncludeSummaryWithNewLine",
+  "Markdown.HandleLineBreak": true
+}

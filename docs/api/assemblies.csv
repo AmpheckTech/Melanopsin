@@ -1,0 +1,12 @@
+Assembly,Project,Summary
+Melanopsin.Mathematics,external/Melanopsin.Mathematics/Melanopsin.Mathematics.csproj,"General-purpose math, geometry, vectors, matrices, and quaternions for .NET."
+Melanopsin.Reactive,src/Melanopsin.Reactive/Melanopsin.Reactive.csproj,"UI-independent reactive values with automatic dependency tracking."
+Melanopsin.Graphics,src/Melanopsin.Graphics/Melanopsin.Graphics.csproj,"Backend-neutral graphics geometry, commands, surfaces, font parsing, shaping, and text layout."
+Melanopsin.Graphics.Backend.Skia,src/Melanopsin.Graphics.Backend/Melanopsin.Graphics.Backend.Skia/Melanopsin.Graphics.Backend.Skia.csproj,"Default Skia rendering backend for Melanopsin."
+Melanopsin.UI,src/Melanopsin.UI/Melanopsin.UI.csproj,"Native AOT-friendly UI runtime for desktop and embedded applications."
+Melanopsin.UI.Controls,src/Melanopsin.UI.Controls/Melanopsin.UI.Controls.csproj,"Built-in controls and layout containers for Melanopsin UI."
+Melanopsin.UI.Desktop,src/Melanopsin.UI.Desktop/Melanopsin.UI.Desktop.csproj,"Default desktop bootstrap for Melanopsin applications."
+Melanopsin.UI.DevTools,src/Melanopsin.UI.DevTools/Melanopsin.UI.DevTools.csproj,"XML-driven diagnostics window for Melanopsin applications."
+Melanopsin.UI.OpenGL,src/Melanopsin.UI.OpenGL/Melanopsin.UI.OpenGL.csproj,"Optional WGL and EGL-backed OpenGLContainer control for Melanopsin."
+Melanopsin.UI.Platform.Win32,src/Melanopsin.UI.Platform/Melanopsin.UI.Platform.Win32/Melanopsin.UI.Platform.Win32.csproj,"Native Win32 platform host for Melanopsin."
+Melanopsin.UI.Platform.Wayland,src/Melanopsin.UI.Platform/Melanopsin.UI.Platform.Wayland/Melanopsin.UI.Platform.Wayland.csproj,"Managed Wayland platform host for Melanopsin."

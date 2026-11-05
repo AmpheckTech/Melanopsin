@@ -13,3 +13,8 @@ artifacts/
 *.png
 **/node_modules/
 *.vsix
+
+# The API reference is published to the GitHub wiki (see docs/api/README.md) and is
+# never committed; the generator writes to artifacts/docs/api by default. This pattern
+# only guards against running an older command line that still targeted docs/api.
+docs/api/*/index.md

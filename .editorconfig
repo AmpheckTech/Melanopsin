@@ -47,3 +47,17 @@ indent_size = 2
 [*.sh]
 indent_style = space
 indent_size = 4
+
+# XML documentation is generated for every project (see Directory.Build.props).
+# Coverage is still being built up, so documentation-shape diagnostics stay as
+# suggestions: they show up in the IDE without failing the warnings-as-errors build.
+[*.cs]
+dotnet_diagnostic.CS1572.severity = suggestion
+dotnet_diagnostic.CS1573.severity = suggestion
+dotnet_diagnostic.CS1574.severity = suggestion
+dotnet_diagnostic.CS1580.severity = suggestion
+dotnet_diagnostic.CS1584.severity = suggestion
+dotnet_diagnostic.CS1591.severity = suggestion
+dotnet_diagnostic.CS1711.severity = suggestion
+dotnet_diagnostic.CS1712.severity = suggestion
+dotnet_diagnostic.CS1734.severity = suggestion
