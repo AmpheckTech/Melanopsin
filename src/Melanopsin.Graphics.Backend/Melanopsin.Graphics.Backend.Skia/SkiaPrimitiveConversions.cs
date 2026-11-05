@@ -4,7 +4,7 @@ namespace Melanopsin.Graphics.Backend.Skia;
 
 internal static class SkiaPrimitiveConversions {
     public static SKRect ToSkRect(Rect rect) {
-        return new SKRect(rect.X, rect.Y, rect.Right, rect.Bottom);
+        return new SKRect(rect.MinX, rect.MinY, rect.MaxX, rect.MaxY);
     }
 
     public static SKRect ToSkRect(PixelRect rect) {

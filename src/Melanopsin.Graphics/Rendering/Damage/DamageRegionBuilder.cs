@@ -31,19 +31,19 @@ public sealed class DamageRegionBuilder {
         }
 
         var left = Math.Clamp(
-            (int)MathF.Floor(bounds.X),
+            (int)MathF.Floor(bounds.MinX),
             0,
             _size.Width);
         var top = Math.Clamp(
-            (int)MathF.Floor(bounds.Y),
+            (int)MathF.Floor(bounds.MinY),
             0,
             _size.Height);
         var right = Math.Clamp(
-            (int)MathF.Ceiling(bounds.Right),
+            (int)MathF.Ceiling(bounds.MaxX),
             0,
             _size.Width);
         var bottom = Math.Clamp(
-            (int)MathF.Ceiling(bounds.Bottom),
+            (int)MathF.Ceiling(bounds.MaxY),
             0,
             _size.Height);
         if (right <= left || bottom <= top) {

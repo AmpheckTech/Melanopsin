@@ -10,7 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
-    <ProjectReference Include="../../src/Melanopsin.UI/Melanopsin.UI.csproj" />
+    <ProjectReference Include="../../src/UI/Melanopsin.UI/Melanopsin.UI.csproj" />
     <ProjectReference Include="../../src/Melanopsin.Graphics/Melanopsin.Graphics.csproj" />
   </ItemGroup>
 

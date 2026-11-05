@@ -315,8 +315,8 @@ internal sealed partial class SkiaSceneRenderer : IDisposable {
         return x == 0 && y == 0
             ? bounds
             : new Rect(
-                bounds.X + x,
-                bounds.Y + y,
+                bounds.MinX + x,
+                bounds.MinY + y,
                 bounds.Width,
                 bounds.Height);
     }

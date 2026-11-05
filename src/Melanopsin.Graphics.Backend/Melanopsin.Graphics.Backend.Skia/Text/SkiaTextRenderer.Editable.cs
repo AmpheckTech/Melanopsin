@@ -23,7 +23,7 @@ internal sealed partial class SkiaTextRenderer {
             DrawTextAt(
                 canvas,
                 command.Placeholder ?? string.Empty,
-                command.Bounds.X,
+                command.Bounds.MinX,
                 command.Bounds,
                 command.FontSize,
                 command.PlaceholderColor,
@@ -65,9 +65,9 @@ internal sealed partial class SkiaTextRenderer {
             selectionPaint.IsAntialias = false;
             canvas.DrawRect(
                 new SKRect(
-                    command.Bounds.X + startX - scrollX,
+                    command.Bounds.MinX + startX - scrollX,
                     lineTop,
-                    command.Bounds.X + endX - scrollX,
+                    command.Bounds.MinX + endX - scrollX,
                     lineTop + lineHeight),
                 selectionPaint);
         }
@@ -75,7 +75,7 @@ internal sealed partial class SkiaTextRenderer {
         DrawTextAt(
             canvas,
             displayText,
-            command.Bounds.X - scrollX,
+            command.Bounds.MinX - scrollX,
             command.Bounds,
             command.FontSize,
             command.Color,
@@ -86,9 +86,9 @@ internal sealed partial class SkiaTextRenderer {
             caretPaint.Color = ToSkColor(command.CaretColor);
             caretPaint.IsAntialias = false;
             var caretLeft = Math.Clamp(
-                command.Bounds.X + caretX - scrollX,
-                command.Bounds.X,
-                Math.Max(command.Bounds.X, command.Bounds.Right - 1));
+                command.Bounds.MinX + caretX - scrollX,
+                command.Bounds.MinX,
+                Math.Max(command.Bounds.MinX, command.Bounds.MaxX - 1));
             canvas.DrawRect(
                 new SKRect(
                     caretLeft,
@@ -128,9 +128,9 @@ internal sealed partial class SkiaTextRenderer {
                     selectionPaint.IsAntialias = false;
                     canvas.DrawRect(
                         new SKRect(
-                            command.Bounds.X + command.SelectionStartX - command.ScrollX,
+                            command.Bounds.MinX + command.SelectionStartX - command.ScrollX,
                             lineTop,
-                            command.Bounds.X + command.SelectionEndX - command.ScrollX,
+                            command.Bounds.MinX + command.SelectionEndX - command.ScrollX,
                             lineTop + lineHeight),
                         selectionPaint);
                 }
@@ -145,7 +145,7 @@ internal sealed partial class SkiaTextRenderer {
                         run,
                         baseline,
                         color,
-                        command.Bounds.X - command.ScrollX);
+                        command.Bounds.MinX - command.ScrollX);
                     DrawGlyphRun(canvas, runCommand);
                 }
             }
@@ -156,9 +156,9 @@ internal sealed partial class SkiaTextRenderer {
             caretPaint.Color = ToSkColor(command.CaretColor);
             caretPaint.IsAntialias = false;
             var caretLeft = Math.Clamp(
-                command.Bounds.X + command.CaretX - command.ScrollX,
-                command.Bounds.X,
-                Math.Max(command.Bounds.X, command.Bounds.Right - 1));
+                command.Bounds.MinX + command.CaretX - command.ScrollX,
+                command.Bounds.MinX,
+                Math.Max(command.Bounds.MinX, command.Bounds.MaxX - 1));
             canvas.DrawRect(
                 new SKRect(
                     caretLeft,
@@ -240,7 +240,7 @@ internal sealed partial class SkiaTextRenderer {
         var lineTypeface = GetLineTypeface(font)!;
         var lineFont = _fontCache.GetFont(lineTypeface, fontSize);
         var metrics = lineFont.Metrics;
-        var baseline = bounds.Y +
+        var baseline = bounds.MinY +
             ((bounds.Height - (metrics.Descent - metrics.Ascent)) / 2) -
             metrics.Ascent;
         paint.Color = ToSkColor(color);
@@ -271,6 +271,6 @@ internal sealed partial class SkiaTextRenderer {
     }
 
     private static float EditableLineTop(Rect bounds, float lineHeight) {
-        return bounds.Y + ((bounds.Height - lineHeight) / 2);
+        return bounds.MinY + ((bounds.Height - lineHeight) / 2);
     }
 }

@@ -100,7 +100,23 @@ public sealed class PerspectiveCamera {
     }
 
     public Matrix4x4 CreateViewMatrix() {
-        return Matrix4x4.CreateLookAt(Position, Target, Up);
+        if (!(Target - Position).TryNormalize(out var forward)) {
+            throw new InvalidOperationException(
+                "The camera position and target must be different.");
+        }
+
+        var backward = -forward;
+        if (!Vector3.Cross(Up, backward).TryNormalize(out var right)) {
+            throw new InvalidOperationException(
+                "The camera up vector must not be parallel to the view direction.");
+        }
+
+        var correctedUp = Vector3.Cross(backward, right);
+        return new Matrix4x4(
+            right.X, right.Y, right.Z, -Vector3.Dot(right, Position),
+            correctedUp.X, correctedUp.Y, correctedUp.Z, -Vector3.Dot(correctedUp, Position),
+            backward.X, backward.Y, backward.Z, -Vector3.Dot(backward, Position),
+            0, 0, 0, 1);
     }
 
     public Matrix4x4 CreateProjectionMatrix(float aspectRatio) {
@@ -108,11 +124,16 @@ public sealed class PerspectiveCamera {
             throw new ArgumentOutOfRangeException(nameof(aspectRatio));
         }
 
-        return Matrix4x4.CreatePerspectiveFieldOfView(
-            ScalarMath.DegreesToRadians(FieldOfViewDegrees),
-            aspectRatio,
-            NearPlane,
-            FarPlane);
+        var tangent = MathF.Tan(ScalarMath.DegreesToRadians(FieldOfViewDegrees) / 2);
+        var verticalScale = 1 / tangent;
+        var horizontalScale = verticalScale / aspectRatio;
+        var depthScale = FarPlane / (NearPlane - FarPlane);
+        var depthTranslation = (NearPlane * FarPlane) / (NearPlane - FarPlane);
+        return new Matrix4x4(
+            horizontalScale, 0, 0, 0,
+            0, verticalScale, 0, 0,
+            0, 0, depthScale, depthTranslation,
+            0, 0, -1, 0);
     }
 
     private static bool IsFinite(Vector3 value) {

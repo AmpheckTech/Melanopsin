@@ -40,16 +40,16 @@ internal sealed partial class SkiaTextRenderer : IDisposable {
 
         var x = command.HorizontalAlignment switch {
             TextHorizontalAlignment.Center =>
-                command.Bounds.X + ((command.Bounds.Width - textWidth) / 2),
-            TextHorizontalAlignment.End => command.Bounds.Right - textWidth,
-            _ => command.Bounds.X,
+                command.Bounds.MinX + ((command.Bounds.Width - textWidth) / 2),
+            TextHorizontalAlignment.End => command.Bounds.MaxX - textWidth,
+            _ => command.Bounds.MinX,
         };
         var metrics = font.Metrics;
         var textHeight = metrics.Descent - metrics.Ascent;
         var y = command.VerticalAlignment switch {
-            TextVerticalAlignment.Top => command.Bounds.Y - metrics.Ascent,
-            TextVerticalAlignment.Bottom => command.Bounds.Bottom - metrics.Descent,
-            _ => command.Bounds.Y +
+            TextVerticalAlignment.Top => command.Bounds.MinY - metrics.Ascent,
+            TextVerticalAlignment.Bottom => command.Bounds.MaxY - metrics.Descent,
+            _ => command.Bounds.MinY +
                  ((command.Bounds.Height - textHeight) / 2) -
                  metrics.Ascent,
         };

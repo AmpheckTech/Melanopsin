@@ -39,10 +39,10 @@ internal sealed partial class SkiaSceneRenderer {
     }
 
     private RasterCacheEntry? CreateRasterCacheEntry(RetainedLayer layer) {
-        var left = (int)MathF.Floor(layer.Bounds.X);
-        var top = (int)MathF.Floor(layer.Bounds.Y);
-        var right = (int)MathF.Ceiling(layer.Bounds.Right);
-        var bottom = (int)MathF.Ceiling(layer.Bounds.Bottom);
+        var left = (int)MathF.Floor(layer.Bounds.MinX);
+        var top = (int)MathF.Floor(layer.Bounds.MinY);
+        var right = (int)MathF.Ceiling(layer.Bounds.MaxX);
+        var bottom = (int)MathF.Ceiling(layer.Bounds.MaxY);
         var width = right - left;
         var height = bottom - top;
         if (width <= 0 || height <= 0) {

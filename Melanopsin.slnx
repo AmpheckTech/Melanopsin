@@ -5,25 +5,25 @@
   <Folder Name="/tools/">
     <Project Path="tools/Melanopsin.UI.ResourceCompiler/Melanopsin.UI.ResourceCompiler.csproj" />
   </Folder>
-  <Folder Name="/external/">
-    <Project Path="external/Melanopsin.Mathematics/Melanopsin.Mathematics.csproj" />
-  </Folder>
   <Folder Name="/src/">
+    <Project Path="src/Melanopsin.Mathematics/Melanopsin.csproj" />
     <Project Path="src/Melanopsin.Graphics/Melanopsin.Graphics.csproj" />
     <Project Path="src/Melanopsin.Reactive/Melanopsin.Reactive.csproj" />
-    <Project Path="src/Melanopsin.UI.Markup.Compiler/Melanopsin.UI.Markup.Compiler.csproj" />
-    <Project Path="src/Melanopsin.UI.DevTools/Melanopsin.UI.DevTools.csproj" />
-    <Project Path="src/Melanopsin.UI.LanguageServer/Melanopsin.UI.LanguageServer.csproj" />
-    <Project Path="src/Melanopsin.UI.OpenGL/Melanopsin.UI.OpenGL.csproj" />
-    <Project Path="src/Melanopsin.UI/Melanopsin.UI.csproj" />
-    <Project Path="src/Melanopsin.UI.Desktop/Melanopsin.UI.Desktop.csproj" />
-    <Project Path="src/Melanopsin.UI.Controls/Melanopsin.UI.Controls.csproj" />
   </Folder>
   <Folder Name="/src/Melanopsin.Graphics.Backend/">
     <Project Path="src/Melanopsin.Graphics.Backend/Melanopsin.Graphics.Backend.Skia/Melanopsin.Graphics.Backend.Skia.csproj" />
   </Folder>
-  <Folder Name="/src/Melanopsin.UI.Platform/">
-    <Project Path="src/Melanopsin.UI.Platform/Melanopsin.UI.Platform.Win32/Melanopsin.UI.Platform.Win32.csproj" />
-    <Project Path="src/Melanopsin.UI.Platform/Melanopsin.UI.Platform.Wayland/Melanopsin.UI.Platform.Wayland.csproj" />
+  <Folder Name="/src/UI/">
+    <Project Path="src/UI/Melanopsin.UI.Markup.Compiler/Melanopsin.UI.Markup.Compiler.csproj" />
+    <Project Path="src/UI/Melanopsin.UI.DevTools/Melanopsin.UI.DevTools.csproj" />
+    <Project Path="src/UI/Melanopsin.UI.LanguageServer/Melanopsin.UI.LanguageServer.csproj" />
+    <Project Path="src/UI/Melanopsin.UI.OpenGL/Melanopsin.UI.OpenGL.csproj" />
+    <Project Path="src/UI/Melanopsin.UI/Melanopsin.UI.csproj" />
+    <Project Path="src/UI/Melanopsin.UI.Desktop/Melanopsin.UI.Desktop.csproj" />
+    <Project Path="src/UI/Melanopsin.UI.Controls/Melanopsin.UI.Controls.csproj" />
+  </Folder>
+  <Folder Name="/src/UI/Platform/">
+    <Project Path="src/UI/Melanopsin.UI.Platform/Melanopsin.UI.Platform.Win32/Melanopsin.UI.Platform.Win32.csproj" />
+    <Project Path="src/UI/Melanopsin.UI.Platform/Melanopsin.UI.Platform.Wayland/Melanopsin.UI.Platform.Wayland.csproj" />
   </Folder>
 </Solution>

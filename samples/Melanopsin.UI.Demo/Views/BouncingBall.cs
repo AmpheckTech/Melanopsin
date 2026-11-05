@@ -63,22 +63,22 @@ public sealed class BouncingBall :
                 MathF.Min(bounds.Width * 0.24f, bounds.Height * 0.24f)));
         var ballWidth = diameter * (1 + (0.12f * squash));
         var ballHeight = diameter * (1 - (0.10f * squash));
-        var groundY = bounds.Bottom - padding;
+        var groundY = bounds.MaxY - padding;
         var travel = MathF.Max(0, bounds.Height - (padding * 2) - diameter);
-        var ballX = bounds.X + ((bounds.Width - ballWidth) / 2);
+        var ballX = bounds.MinX + ((bounds.Width - ballWidth) / 2);
         var ballY = groundY - ballHeight - (travel * lift);
 
         var guide = new Color(25, 32, 29);
-        var guideX = bounds.X + (bounds.Width / 2);
+        var guideX = bounds.MinX + (bounds.Width / 2);
         commands.Add(new FillRectangleCommand(
-            new Rect(guideX, bounds.Y + padding, 1, groundY - bounds.Y - padding),
+            new Rect(guideX, bounds.MinY + padding, 1, groundY - bounds.MinY - padding),
             guide));
         commands.Add(new FillRectangleCommand(
-            new Rect(bounds.X + padding, groundY, bounds.Width - (padding * 2), 1),
+            new Rect(bounds.MinX + padding, groundY, bounds.Width - (padding * 2), 1),
             new Color(42, 52, 47)));
 
         for (var index = 1; index < 4; index++) {
-            var tickX = bounds.X + (bounds.Width * index / 4);
+            var tickX = bounds.MinX + (bounds.Width * index / 4);
             commands.Add(new FillRectangleCommand(
                 new Rect(tickX, groundY - 3, 1, 7),
                 guide));
@@ -89,7 +89,7 @@ public sealed class BouncingBall :
         var shadowAlpha = (byte)(48 - (34 * lift));
         commands.Add(new FillRectangleCommand(
             new Rect(
-                bounds.X + ((bounds.Width - shadowWidth) / 2),
+                bounds.MinX + ((bounds.Width - shadowWidth) / 2),
                 groundY - (shadowHeight / 2),
                 shadowWidth,
                 shadowHeight),

@@ -98,7 +98,7 @@ remove an assembly: the generator and the wiki index both read that file.
 
 `GeneratedAccessModifiers` is `Public,Protected`, so `internal` types are skipped, and
 `IncludeUndocumentedItems` is `false`, so assemblies without `///` comments (currently
-`Melanopsin.Mathematics`) publish only a handful of pages.
+`Melanopsin`) publish only a handful of pages.
 
 ## XML documentation in the build
 

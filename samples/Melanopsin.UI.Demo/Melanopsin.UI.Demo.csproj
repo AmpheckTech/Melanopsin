@@ -25,23 +25,23 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../src/Melanopsin.UI.Desktop/Melanopsin.UI.Desktop.csproj" />
-    <ProjectReference Include="../../src/Melanopsin.UI/Melanopsin.UI.csproj" />
-    <ProjectReference Include="../../src/Melanopsin.UI.Controls/Melanopsin.UI.Controls.csproj" />
-    <ProjectReference Include="../../src/Melanopsin.UI.DevTools/Melanopsin.UI.DevTools.csproj" />
+    <ProjectReference Include="../../src/UI/Melanopsin.UI.Desktop/Melanopsin.UI.Desktop.csproj" />
+    <ProjectReference Include="../../src/UI/Melanopsin.UI/Melanopsin.UI.csproj" />
+    <ProjectReference Include="../../src/UI/Melanopsin.UI.Controls/Melanopsin.UI.Controls.csproj" />
+    <ProjectReference Include="../../src/UI/Melanopsin.UI.DevTools/Melanopsin.UI.DevTools.csproj" />
     <ProjectReference
-      Include="../../src/Melanopsin.UI.Markup.Compiler/Melanopsin.UI.Markup.Compiler.csproj"
+      Include="../../src/UI/Melanopsin.UI.Markup.Compiler/Melanopsin.UI.Markup.Compiler.csproj"
       OutputItemType="Analyzer"
       ReferenceOutputAssembly="false"
       GlobalPropertiesToRemove="PublishAot;SelfContained;RuntimeIdentifier" />
     <ProjectReference Include="../../src/Melanopsin.Graphics.Backend/Melanopsin.Graphics.Backend.Skia/Melanopsin.Graphics.Backend.Skia.csproj" />
-    <ProjectReference Include="..\..\src\Melanopsin.UI.Platform\Melanopsin.UI.Platform.Win32\Melanopsin.UI.Platform.Win32.csproj" />
-    <ProjectReference Include="..\..\src\Melanopsin.UI.Platform\Melanopsin.UI.Platform.Wayland\Melanopsin.UI.Platform.Wayland.csproj" />
+    <ProjectReference Include="..\..\src\UI\Melanopsin.UI.Platform\Melanopsin.UI.Platform.Win32\Melanopsin.UI.Platform.Win32.csproj" />
+    <ProjectReference Include="..\..\src\UI\Melanopsin.UI.Platform\Melanopsin.UI.Platform.Wayland\Melanopsin.UI.Platform.Wayland.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <AdditionalFiles Include="Views/**/*.mxml" />
-    <AdditionalFiles Include="Styles/**/*.css" />
+    <AdditionalFiles Include="Styles/**/*.mcss" />
   </ItemGroup>
 
   <ItemGroup>
