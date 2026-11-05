@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Melanopsin Project Contributors
+//
+// SPDX-License-Identifier: MIT
+
 namespace Melanopsin.UI.App;
 
 // TODO(resources): Define whether Object values are runtime-only or serializable.

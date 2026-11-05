@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Melanopsin Project Contributors
+//
+// SPDX-License-Identifier: MIT
+
 namespace Melanopsin.Graphics.Backend.Skia;
 
 internal sealed class SkiaFrameSurface(SkiaRenderTarget owner) :

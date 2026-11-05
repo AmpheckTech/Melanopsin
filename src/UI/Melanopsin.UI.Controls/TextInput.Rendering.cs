@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Melanopsin Project Contributors
+//
+// SPDX-License-Identifier: MIT
+
 using System.Globalization;
 using Melanopsin.UI.Input;
 using Melanopsin.UI.Rendering;

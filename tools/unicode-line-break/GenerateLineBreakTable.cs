@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Melanopsin Project Contributors
+//
+// SPDX-License-Identifier: MIT
+
 // Generates the packed UAX #14 line break table that Melanopsin.Graphics embeds
 // as Text/Shaping/LineBreakData.bin, together with the LineBreakClass enum that
 // the class codes in that table index into.

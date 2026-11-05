@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Melanopsin Project Contributors
+//
+// SPDX-License-Identifier: MIT
+
 using Melanopsin.UI.Markup.Compiler.Diagnostics;
 
 namespace Melanopsin.UI.Markup.Compiler.Resources;

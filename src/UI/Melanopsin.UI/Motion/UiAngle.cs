@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Melanopsin Project Contributors
+//
+// SPDX-License-Identifier: MIT
+
 namespace Melanopsin.UI.Motion;
 
 public readonly record struct UiAngle(float Degrees, AngleUnit Unit = AngleUnit.Degrees) {

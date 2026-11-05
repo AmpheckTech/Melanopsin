@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Melanopsin Project Contributors
+//
+// SPDX-License-Identifier: MIT
+
 using Microsoft.CodeAnalysis;
 
 namespace Melanopsin.UI.Markup.Compiler.Diagnostics;

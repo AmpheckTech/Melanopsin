@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Melanopsin Project Contributors
+//
+// SPDX-License-Identifier: MIT
+
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 using MsBuildTask = Microsoft.Build.Utilities.Task;

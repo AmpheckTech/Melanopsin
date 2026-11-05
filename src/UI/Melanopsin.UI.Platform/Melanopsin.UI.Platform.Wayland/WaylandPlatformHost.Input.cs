@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Melanopsin Project Contributors
+//
+// SPDX-License-Identifier: MIT
+
 using Melanopsin.UI.Input;
 using NWayland;
 using NWayland.Protocols.CursorShapeV1;

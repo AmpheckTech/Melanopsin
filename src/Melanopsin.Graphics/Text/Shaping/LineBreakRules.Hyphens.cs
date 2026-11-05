@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Melanopsin Project Contributors
+//
+// SPDX-License-Identifier: MIT
+
 namespace Melanopsin.Graphics.Text;
 
 /// <summary>LB20 through LB21b: contingent breaks and hyphens.</summary>

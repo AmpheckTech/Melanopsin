@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Melanopsin Project Contributors
+//
+// SPDX-License-Identifier: MIT
+
 namespace Melanopsin.UI.Markup.Compiler.Language;
 
 /// <summary>Describes one opening and optional closing tag in an MXML document.</summary>

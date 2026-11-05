@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Melanopsin Project Contributors
+//
+// SPDX-License-Identifier: MIT
+
 using System.Linq;
 using Melanopsin.UI.Markup.Compiler.Diagnostics;
 using Melanopsin.UI.Markup.Compiler.Parsing;

@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Melanopsin Project Contributors
+//
+// SPDX-License-Identifier: MIT
+
 namespace Melanopsin.Graphics.Text;
 
 /// <summary>LB4 through LB8a: hard line breaks and zero width characters.</summary>

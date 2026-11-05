@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Melanopsin Project Contributors
+//
+// SPDX-License-Identifier: MIT
+
 namespace Melanopsin.Mathematics;
 
 /// <summary>Identifies a geometric operation that can terminate without a result.</summary>

@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Melanopsin Project Contributors
+//
+// SPDX-License-Identifier: MIT
+
 namespace Melanopsin.UI.LanguageServer.Protocol;
 
 internal sealed record OpenDocument(string Uri, string Path, string Text, int Version);

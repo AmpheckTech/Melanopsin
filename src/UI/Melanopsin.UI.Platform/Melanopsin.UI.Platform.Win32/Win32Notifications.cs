@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Melanopsin Project Contributors
+//
+// SPDX-License-Identifier: MIT
+
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using Melanopsin.UI.Platform.Win32.Windowing;

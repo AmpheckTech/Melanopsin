@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Melanopsin Project Contributors
+//
+// SPDX-License-Identifier: MIT
+
 using NWayland.Protocols.FractionalScaleV1;
 using NWayland.Protocols.Wayland;
 

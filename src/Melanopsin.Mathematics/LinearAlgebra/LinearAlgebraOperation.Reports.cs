@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Melanopsin Project Contributors
+//
+// SPDX-License-Identifier: MIT
+
 namespace Melanopsin.Mathematics;
 
 /// <summary>Identifies a real or complex linear-algebra operation that can terminate without a result.</summary>

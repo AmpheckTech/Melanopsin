@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Melanopsin Project Contributors
+//
+// SPDX-License-Identifier: MIT
+
 namespace Melanopsin.Mathematics.Coordinates;
 
 /// <summary>Identifies a coordinate-frame or geodetic transformation operation.</summary>

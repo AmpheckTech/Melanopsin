@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Melanopsin Project Contributors
+//
+// SPDX-License-Identifier: MIT
+
 using System.Runtime.ExceptionServices;
 using Melanopsin.UI.Threading;
 

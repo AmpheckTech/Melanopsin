@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Melanopsin Project Contributors
+//
+// SPDX-License-Identifier: MIT
+
 // Generates the packed UAX #9 property tables embedded by Melanopsin.Graphics.
 //
 //   dotnet run tools/unicode-bidi/GenerateBidiData.cs
