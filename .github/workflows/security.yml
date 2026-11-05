@@ -39,8 +39,8 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore Melanopsin.slnx
 
-      - name: Build with analyzers
-        run: dotnet build Melanopsin.slnx --no-restore --configuration Release --nologo
+      - name: Build analyzer workspace
+        run: dotnet build Melanopsin.slnx --no-restore --nologo
 
       - name: Verify analyzer cleanup
         run: dotnet format analyzers Melanopsin.slnx --verify-no-changes --no-restore --verbosity minimal
