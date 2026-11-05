@@ -1,6 +1,6 @@
-# Notices
+# Third-Party Notices
 
-Melanopsin is licensed under the Apache License 2.0. See `LICENSE`.
+Melanopsin is licensed under the MIT License. See `LICENSE`.
 
 Melanopsin includes third-party software. Each component remains subject to its own
 license and copyright. The versions below describe the dependency baseline at the
@@ -200,5 +200,7 @@ be used in advertising or otherwise to promote the sale, use or other dealings
 in these Data Files or Software without prior written authorization of the
 copyright holder.
 
-This notice does not replace the license files supplied by individual
-dependencies and does not grant a license to Melanopsin itself.
+Melanopsin's own code is licensed under the MIT License. Third-party components
+remain subject to their respective licenses. This notice does not replace the
+license files supplied by individual dependencies and does not grant a license
+to Melanopsin itself.
