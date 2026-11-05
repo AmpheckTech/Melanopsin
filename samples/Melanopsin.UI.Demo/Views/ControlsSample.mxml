@@ -57,7 +57,7 @@
       <TextBlock class="section-title" text="Pointer buttons" wrap="false" />
       <TextBlock
         class="control-hint"
-        text="Left invokes Clicked. Middle invokes MiddleClicked only after a matching press and release. Right opens the context menu."
+        text="Tab moves focus; Space or Enter activates. Sliders and number inputs accept arrows, Page keys and Home/End. Text supports Shift selection, Ctrl/Cmd word navigation and C/X/V, double-click and triple-click."
         width="100%" />
 
       <Button
@@ -123,6 +123,16 @@
         width="100%"
         onTextChanged="SetDisplayName($event)"
         onSubmitted="SubmitName($event)" />
+      <LinearLayout orientation="vertical" spacing="0.4su" width="100%">
+        <TextBlock class="type-label" text="{{ RetryLabel }}" wrap="false" />
+        <NumberInput
+          value="{{ RetryCount }}"
+          minimum="1"
+          maximum="12"
+          step="1"
+          width="100%"
+          onValueChanged="SetRetryCount($event)" />
+      </LinearLayout>
       <ComboBox
         items="Compact|Comfortable|Spacious"
         selected-index="{{ DensityIndex }}"

@@ -16,6 +16,7 @@ public sealed partial class ControlsSample : Component {
     private string _displayName = string.Empty;
     private string _listSummary = "No row selected";
     private double _volume = 55;
+    private double _retryCount = 3;
     private int _densityIndex = 1;
     private bool _reduceMotion;
     private bool _showDiagnostics = true;
@@ -38,6 +39,10 @@ public sealed partial class ControlsSample : Component {
     public string ListSummary => _listSummary;
 
     public double Volume => _volume;
+
+    public double RetryCount => _retryCount;
+
+    public string RetryLabel => $"Retry limit · {_retryCount:0}";
 
     public int DensityIndex => _densityIndex;
 
@@ -99,6 +104,8 @@ public sealed partial class ControlsSample : Component {
     }
 
     public void SetVolume(double value) => _volume = value;
+
+    public void SetRetryCount(double value) => _retryCount = value;
 
     public void SelectListRow(int index) {
         _listSummary = index < 0 ? "No row selected" : $"Row {index + 1} selected";
