@@ -1,7 +1,6 @@
 // Generates the packed UAX #9 property tables embedded by Melanopsin.Graphics.
 //
-//   dotnet run tools/unicode-bidi/GenerateBidiData.cs \
-//     -p:RestorePackagesWithLockFile=false
+//   dotnet run tools/unicode-bidi/GenerateBidiData.cs
 //
 // Unicode Character Database files are downloaded from unicode.org and cached
 // in the system temporary directory. Pass --ucd <directory> to use a local copy.
