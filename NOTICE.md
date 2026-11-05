@@ -1,8 +1,10 @@
-# Third-Party Notices
+# Notices
 
-Melanopsin includes third-party software. Each component remains subject to its
-own license and copyright. The versions below reflect the current locked
-dependency graph; `packages.lock.json` files are authoritative when they differ.
+Melanopsin is licensed under the Apache License 2.0. See `LICENSE`.
+
+Melanopsin includes third-party software. Each component remains subject to its own
+license and copyright. The versions below describe the dependency baseline at the
+time of this notice; the SBOM generated for a release is authoritative for that build.
 
 ## Distributed components
 
@@ -21,7 +23,7 @@ native libraries bundled with them. Redistributors should preserve the upstream
 `THIRD-PARTY-NOTICES.txt` files shipped with those packages.
 
 The files in
-`src/Melanopsin.UI.Platform/Melanopsin.UI.Platform.Wayland/Native/Protocol/`
+`src/UI/Melanopsin.UI.Platform/Melanopsin.UI.Platform.Wayland/Native/Protocol/`
 are generated from Wayland protocol definitions and retain their original MIT
 license and copyright notices in each file.
 

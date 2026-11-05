@@ -17,6 +17,8 @@
     <IsPackable>false</IsPackable>
     <Authors>AmpheckTech</Authors>
     <Company>AmpheckTech</Company>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <Copyright>Copyright (c) 2026 Liehumao Technology (Fuzhou) Co., Ltd.</Copyright>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/AmpheckTech/Melanopsin.git</RepositoryUrl>
     <PackageProjectUrl>https://github.com/AmpheckTech/Melanopsin</PackageProjectUrl>
@@ -31,6 +33,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)LICENSE"
+          Pack="true"
+          PackagePath=""
+          Visible="false" />
     <None Include="$(MSBuildThisFileDirectory)NOTICE.md"
           Pack="true"
           PackagePath=""
