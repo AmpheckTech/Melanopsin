@@ -89,6 +89,17 @@ Input {
 Input:focused { border-color: #27745f; border-width: 2hx; }
 Input:disabled { cursor: not-allowed; }
 
+NumberInput { background: transparent; padding: 0px; }
+Button.number-input-step {
+    background: #e3ece7;
+    color: #245244;
+    border-radius: 2ru;
+    padding: 0px;
+    font-size: 16fu;
+}
+Button.number-input-step:hover { background: #d5e4dc; }
+Button.number-input-step:pressed { background: #c4d9cf; }
+
 CheckBox, RadioButton, Switch {
     background: $transparent;
     color: $on-surface;
@@ -118,7 +129,7 @@ ComboBox {
 
 ComboBox:hover { background: #f3f8f5; border-color: #6f9a8c; }
 ComboBox:pressed { background: #e4eee8; }
-ComboBox:expanded, ComboBox:focused { border-color: #1f6d59; }
+ComboBox:expanded { border-color: #1f6d59; }
 ComboBox:disabled {
     background: #f1f3f2;
     color: #6f7774;

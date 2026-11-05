@@ -1,4 +1,4 @@
-@import "Material.css";
+@import "Material.mcss";
 
 @tokens {
     app-background: color = #0f1211;
